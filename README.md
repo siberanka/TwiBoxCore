@@ -11,6 +11,8 @@ TwiBoxCore combines two focused BoxPVP compatibility plugins into one maintained
 
 The merged plugin preserves the legacy commands and persistent-data keys, so existing special items remain recognizable. It contains no telemetry, update checker, webhook, licensing call, server address, credential, or player data.
 
+Version 1.1 adds a bounded, one-time importer for the legacy combat configuration. The equipment-effects predecessor did not have a configuration directory, so there is no second config to import.
+
 ## Requirements
 
 - Java 21 or newer
@@ -23,8 +25,9 @@ See [Third-party boundaries](THIRD_PARTY.md) for the dependency and licensing bo
 
 1. Stop the server and back up the plugin directory plus player data.
 2. Remove `TwilightEquipmentEffectsGuard` and `TwilightLegacyCombatCompat` from the plugin directory. Do not run them together with TwiBoxCore.
-3. Copy `TwiBoxCore-1.0.0.jar` into `plugins/`.
+3. Copy `TwiBoxCore-1.1.0.jar` into `plugins/`. Keep the old `TwilightLegacyCombatCompat/config.yml` in place for the first start if it should be imported.
 4. Start the server and run `/twiboxcore status`, then `/twiboxcore selftest`.
+5. Confirm `legacyImport=completed`; archived input and import state are stored under `plugins/TwiBoxCore/`.
 
 For a production migration and rollback procedure, read [Migration guide](docs/MIGRATION.md).
 
@@ -65,17 +68,19 @@ The bundled [`config.yml`](src/main/resources/config.yml) reproduces the origina
 
 Break-speed values are final multipliers: `0.40` means 40% of the otherwise calculated speed. Bukkit potion amplifiers are zero-based: `1` means Mining Fatigue II.
 
+On first start, `migration.import-legacy-configs: true` imports only the seven recognized combat settings from `plugins/TwilightLegacyCombatCompat/config.yml`. Existing non-default TwiBoxCore values win, unknown keys are ignored, the source is never modified, and a hash-named backup plus completion record prevents repeated imports. See the [migration guide](docs/MIGRATION.md).
+
 ## Building
 
 ```shell
 mvn --batch-mode clean verify
 ```
 
-The verified artifact is written to `target/TwiBoxCore-1.0.0.jar`. The project deliberately has no CI workflow; releases are built and tested explicitly.
+The verified artifact is written to `target/TwiBoxCore-1.1.0.jar`. The project deliberately has no CI workflow; releases are built and tested explicitly.
 
 ## Scope
 
-TwiBoxCore does not contain ItemEdit, ItemTag, UnlimitedNameTags, server configurations, stored items, world data, or the one-shot migration utilities used during the original upgrade. Those projects and operational artifacts remain separate.
+TwiBoxCore does not contain ItemEdit, ItemTag, UnlimitedNameTags, server configurations, stored items, or world data. UnlimitedNameTags is an unmodified third-party plugin and is explicitly outside this merge. Operational deployment artifacts remain separate.
 
 ## License
 

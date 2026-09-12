@@ -26,6 +26,11 @@ class DescriptorTest {
     @Test
     void defaultConfigurationEnablesBothModules() {
         Map<String, Object> configuration = yaml("config.yml");
+        assertEquals(2, configuration.get("config-version"));
+
+        Map<?, ?> migration = (Map<?, ?>) configuration.get("migration");
+        assertEquals(Boolean.TRUE, migration.get("import-legacy-configs"));
+
         Map<?, ?> modules = (Map<?, ?>) configuration.get("modules");
         assertEquals(Boolean.TRUE, modules.get("equipment-effects"));
         assertEquals(Boolean.TRUE, modules.get("legacy-combat"));

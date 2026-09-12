@@ -3,6 +3,7 @@ package net.twilightnw.twiboxcore;
 import java.util.Locale;
 import net.twilightnw.twiboxcore.combat.LegacyCombatModule;
 import net.twilightnw.twiboxcore.equipment.EquipmentEffectsModule;
+import net.twilightnw.twiboxcore.migration.LegacyConfigMigrator;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -10,10 +11,16 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class TwiBoxCore extends JavaPlugin {
     private EquipmentEffectsModule equipmentEffects;
     private LegacyCombatModule legacyCombat;
+    private String migrationStatus = "not-run";
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        LegacyConfigMigrator.Result migration = LegacyConfigMigrator.run(this);
+        migrationStatus = migration.status();
+        if (migration.configChanged()) {
+            reloadConfig();
+        }
         startModules();
         getLogger().info("TwiBoxCore " + getPluginMeta().getVersion() + " enabled.");
     }
@@ -68,7 +75,8 @@ public final class TwiBoxCore extends JavaPlugin {
             case "status" -> {
                 sender.sendMessage("TwiBoxCore " + getPluginMeta().getVersion()
                         + ": equipment=" + (equipmentEffects == null ? "disabled" : equipmentEffects.status())
-                        + ", combat=" + (legacyCombat == null ? "disabled" : legacyCombat.status()));
+                        + ", combat=" + (legacyCombat == null ? "disabled" : legacyCombat.status())
+                        + ", legacyImport=" + migrationStatus);
                 return true;
             }
             case "reload" -> {

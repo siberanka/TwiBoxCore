@@ -7,4 +7,4 @@ TwiBoxCore does not copy, modify, shade, or redistribute ItemEdit or ItemTag cod
 
 The optional integration is limited to recognizing existing namespaced persistent-data values written to items. Server owners must download and maintain those plugins independently if they need their editing commands or runtime features.
 
-TwiBoxCore also does not bundle or modify PlayerKits2, Shopkeepers, ExcellentCrates, or UnlimitedNameTags. They are listed only where load ordering or migration documentation benefits from identifying the surrounding integration.
+TwiBoxCore also does not bundle or modify PlayerKits2, Shopkeepers, ExcellentCrates, or UnlimitedNameTags. UnlimitedNameTags was verified as an original third-party component and is intentionally excluded from the merge. These names appear only where load ordering or migration documentation benefits from identifying the surrounding integration.

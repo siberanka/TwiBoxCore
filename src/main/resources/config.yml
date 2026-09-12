@@ -1,4 +1,9 @@
-config-version: 1
+config-version: 2
+
+migration:
+  # Imports recognized legacy Twilight plugin configs once. Source files are
+  # backed up and left untouched; custom TwiBoxCore values take precedence.
+  import-legacy-configs: true
 
 modules:
   equipment-effects: true
