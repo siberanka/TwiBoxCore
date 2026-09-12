@@ -1,0 +1,38 @@
+config-version: 1
+
+modules:
+  equipment-effects: true
+  legacy-combat: true
+
+# These defaults preserve the behavior of the two original compatibility
+# plugins. World names and material rules can be adjusted for another server.
+equipment-effects:
+  fatigue:
+    amplifier: 1 # Bukkit is zero-based: 1 = Mining Fatigue II
+    duration-ticks: 20
+    arm-delay-ticks: 6
+  break-speed-multipliers:
+    witch-shears: 0.40
+    zeus-hoe: 0.20
+    glacier-pickaxe: 0.10
+  restricted-blocks:
+    witch-wool:
+      world: endd
+      materials: [BLACK_WOOL, GRAY_WOOL]
+    atlantis-sponge:
+      world: atlantis
+      materials: [SPONGE, WET_SPONGE]
+    glacier-ice:
+      world: sogukdiyar
+      materials: [ICE]
+
+legacy-combat:
+  repair:
+    enabled: true
+    minimum-protection-level: 15
+    online-scan-interval-ticks: 100
+  protection-scaling:
+    enabled: true
+    vanilla-total-level-cap: 20
+    extra-reduction-per-excess-level: 0.0022
+    maximum-extra-reduction: 0.35

@@ -1,0 +1,10 @@
+# Third-party boundaries
+
+TwiBoxCore does not copy, modify, shade, or redistribute ItemEdit or ItemTag code or binaries.
+
+- [ItemEdit](https://github.com/emanondev/ItemEdit), by emanondev, is distributed separately under GPL-3.0.
+- [ItemTag](https://github.com/emanondev/ItemTag), by emanondev, is distributed separately under GPL-3.0.
+
+The optional integration is limited to recognizing existing namespaced persistent-data values written to items. Server owners must download and maintain those plugins independently if they need their editing commands or runtime features.
+
+TwiBoxCore also does not bundle or modify PlayerKits2, Shopkeepers, ExcellentCrates, or UnlimitedNameTags. They are listed only where load ordering or migration documentation benefits from identifying the surrounding integration.

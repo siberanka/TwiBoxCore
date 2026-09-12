@@ -1,0 +1,45 @@
+name: TwiBoxCore
+version: '${project.version}'
+main: net.twilightnw.twiboxcore.TwiBoxCore
+api-version: '1.21'
+author: siberanka
+description: Modern BoxPVP equipment and legacy combat compatibility core.
+softdepend:
+  - ItemTag
+  - ItemEdit
+  - PlayerKits2
+  - Shopkeepers
+  - ExcellentCrates
+commands:
+  twiboxcore:
+    description: Shows status, reloads configuration, or runs diagnostics.
+    usage: /twiboxcore <status|reload|scan|selftest>
+    permission: twiboxcore.admin
+    aliases: [tbc]
+  twilighttool:
+    description: Issues canonical special mining tools.
+    usage: /twilighttool give buzul <player>
+    permission: twilighttool.admin
+  twilightcombat:
+    description: Legacy alias for combat repair diagnostics.
+    usage: /twilightcombat <status|scan|selftest>
+    permission: twilightcombat.admin
+permissions:
+  twiboxcore.admin:
+    description: Full access to TwiBoxCore administration.
+    default: op
+    children:
+      twiboxcore.tools.give: true
+      twilighttool.admin: true
+      twilightcombat.admin: true
+  twiboxcore.tools.give:
+    description: Allows issuing canonical special mining tools.
+    default: op
+  twilighttool.admin:
+    description: Legacy permission alias for issuing special mining tools.
+    default: op
+    children:
+      twiboxcore.tools.give: true
+  twilightcombat.admin:
+    description: Legacy permission alias for combat repair diagnostics.
+    default: op
