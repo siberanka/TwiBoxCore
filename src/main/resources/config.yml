@@ -17,9 +17,9 @@ equipment-effects:
     duration-ticks: 20
     arm-delay-ticks: 6
   break-speed-multipliers:
-    witch-shears: 0.40
-    zeus-hoe: 0.20
-    glacier-pickaxe: 0.10
+    witch-shears: 0.60
+    zeus-hoe: 0.30
+    glacier-pickaxe: 0.15
   restricted-blocks:
     witch-wool:
       world: endd
@@ -35,7 +35,6 @@ legacy-combat:
   repair:
     enabled: true
     minimum-protection-level: 15
-    online-scan-interval-ticks: 100
   protection-scaling:
     enabled: true
     vanilla-total-level-cap: 20

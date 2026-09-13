@@ -23,11 +23,11 @@ class LegacyCombatConfigMappingTest {
         assertTrue(result.changed());
         assertEquals(77, target.getInt("legacy-combat.repair.minimum-protection-level"));
         assertFalse(target.getBoolean("legacy-combat.repair.enabled"));
-        assertEquals(140, target.getInt("legacy-combat.repair.online-scan-interval-ticks"));
+        assertFalse(target.contains("legacy-combat.repair.online-scan-interval-ticks", true));
         assertEquals(0.004, target.getDouble(
                 "legacy-combat.protection-scaling.extra-reduction-per-excess-level"));
         assertEquals(1, result.preserved().size());
-        assertEquals(6, result.imported().size());
+        assertEquals(5, result.imported().size());
         assertFalse(target.contains("legacy-combat.unrecognized-value", true));
     }
 
@@ -42,7 +42,7 @@ class LegacyCombatConfigMappingTest {
                 LegacyCombatConfigMapping.apply(source, target, defaults);
 
         assertFalse(second.changed());
-        assertEquals(7, second.imported().size());
+        assertEquals(6, second.imported().size());
         assertTrue(second.preserved().isEmpty());
     }
 

@@ -92,6 +92,30 @@ public final class TwiBoxCore extends JavaPlugin {
                 }
                 return true;
             }
+            case "refresh" -> {
+                if (legacyCombat == null) {
+                    sender.sendMessage("Legacy combat module is disabled.");
+                } else {
+                    sender.sendMessage("CATALOG_REFRESH=PASS items="
+                            + legacyCombat.refreshCanonicalCatalog());
+                }
+                return true;
+            }
+            case "export" -> {
+                if (legacyCombat == null) {
+                    sender.sendMessage("Legacy combat module is disabled.");
+                } else {
+                    try {
+                        sender.sendMessage("CATALOG_EXPORT=PASS items="
+                                + legacyCombat.exportCanonicalCatalog());
+                    } catch (java.io.IOException exception) {
+                        getLogger().log(java.util.logging.Level.SEVERE,
+                                "Could not export canonical catalog", exception);
+                        sender.sendMessage("CATALOG_EXPORT=FAIL");
+                    }
+                }
+                return true;
+            }
             case "selftest" -> {
                 boolean equipmentPassed = equipmentEffects == null || equipmentEffects.selfTest(sender);
                 boolean combatPassed = legacyCombat == null || legacyCombat.selfTest(sender);

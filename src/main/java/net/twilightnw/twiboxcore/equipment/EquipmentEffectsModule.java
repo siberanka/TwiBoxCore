@@ -121,9 +121,9 @@ public final class EquipmentEffectsModule implements Listener {
         targetAmplifier = Math.max(0, plugin.getConfig().getInt(root + "fatigue.amplifier", 1));
         effectTicks = Math.max(5, plugin.getConfig().getInt(root + "fatigue.duration-ticks", 20));
         armTicks = Math.max(0, plugin.getConfig().getInt(root + "fatigue.arm-delay-ticks", 6));
-        witchModifier = BreakSpeed.toAttributeModifier(plugin.getConfig().getDouble(root + "break-speed-multipliers.witch-shears", 0.40));
-        zeusModifier = BreakSpeed.toAttributeModifier(plugin.getConfig().getDouble(root + "break-speed-multipliers.zeus-hoe", 0.20));
-        glacierModifier = BreakSpeed.toAttributeModifier(plugin.getConfig().getDouble(root + "break-speed-multipliers.glacier-pickaxe", 0.10));
+        witchModifier = BreakSpeed.toAttributeModifier(plugin.getConfig().getDouble(root + "break-speed-multipliers.witch-shears", 0.60));
+        zeusModifier = BreakSpeed.toAttributeModifier(plugin.getConfig().getDouble(root + "break-speed-multipliers.zeus-hoe", 0.30));
+        glacierModifier = BreakSpeed.toAttributeModifier(plugin.getConfig().getDouble(root + "break-speed-multipliers.glacier-pickaxe", 0.15));
         rules.clear();
         rules.put(BlockRuleType.WITCH_WOOL, loadRule(root + "restricted-blocks.witch-wool", ToolKind.WITCH_SHEARS, true));
         rules.put(BlockRuleType.ATLANTIS_SPONGE, loadRule(root + "restricted-blocks.atlantis-sponge", ToolKind.ZEUS_HOE, true));
@@ -160,9 +160,9 @@ public final class EquipmentEffectsModule implements Listener {
     }
 
     public boolean selfTest(CommandSender sender) {
-        boolean passed = closeTo(1.0 + witchModifier, 0.40)
-                && closeTo(1.0 + zeusModifier, 0.20)
-                && closeTo(1.0 + glacierModifier, 0.10)
+        boolean passed = closeTo(1.0 + witchModifier, 0.60)
+                && closeTo(1.0 + zeusModifier, 0.30)
+                && closeTo(1.0 + glacierModifier, 0.15)
                 && rules.values().stream().allMatch(rule -> !rule.world().isBlank() && !rule.materials().isEmpty());
         sender.sendMessage("Equipment self-test: " + (passed ? "PASS" : "FAIL"));
         return passed;
@@ -211,21 +211,18 @@ public final class EquipmentEffectsModule implements Listener {
     public void onInventoryClick(InventoryClickEvent event) {
         if (event.getWhoClicked() instanceof Player player) {
             arm(player);
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                normalizeInventory(player);
-                reconcile(player);
-            });
+            normalize(event.getCurrentItem());
+            normalize(event.getCursor());
+            Bukkit.getScheduler().runTask(plugin, () -> reconcile(player));
         }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPickup(EntityPickupItemEvent event) {
         if (event.getEntity() instanceof Player player) {
+            normalize(event.getItem().getItemStack());
             arm(player);
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                normalizeInventory(player);
-                reconcile(player);
-            });
+            Bukkit.getScheduler().runTask(plugin, () -> reconcile(player));
         }
     }
 
@@ -298,9 +295,6 @@ public final class EquipmentEffectsModule implements Listener {
                     arm(player);
                 }
                 reconcile(player);
-                if (tick % 20L == 0L) {
-                    normalizeInventory(player);
-                }
             } catch (RuntimeException exception) {
                 plugin.getLogger().log(Level.WARNING, "Equipment guard failed for " + player.getName(), exception);
             }
@@ -427,7 +421,9 @@ public final class EquipmentEffectsModule implements Listener {
         if (kind == ToolKind.GLACIER_PICKAXE) {
             changed |= meta.addEnchant(Enchantment.SILK_TOUCH, 1, true);
             changed |= meta.addEnchant(Enchantment.UNBREAKING, 1, true);
-            for (ItemFlag flag : List.of(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES)) {
+            // Attribute visibility is normalized, but enchantment visibility is
+            // deliberately preserved exactly as the source item configured it.
+            for (ItemFlag flag : List.of(ItemFlag.HIDE_ATTRIBUTES)) {
                 if (!meta.hasItemFlag(flag)) {
                     meta.addItemFlags(flag);
                     changed = true;
@@ -444,7 +440,7 @@ public final class EquipmentEffectsModule implements Listener {
         }
         if (kind == ToolKind.ZEUS_HOE) {
             changed |= meta.addEnchant(Enchantment.UNBREAKING, 1, true);
-            for (ItemFlag flag : List.of(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES)) {
+            for (ItemFlag flag : List.of(ItemFlag.HIDE_ATTRIBUTES)) {
                 if (!meta.hasItemFlag(flag)) {
                     meta.addItemFlags(flag);
                     changed = true;

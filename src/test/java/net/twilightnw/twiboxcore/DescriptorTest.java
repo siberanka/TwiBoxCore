@@ -1,6 +1,7 @@
 package net.twilightnw.twiboxcore;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -42,11 +43,13 @@ class DescriptorTest {
         assertEquals(6, fatigue.get("arm-delay-ticks"));
 
         Map<?, ?> speeds = (Map<?, ?>) equipment.get("break-speed-multipliers");
-        assertEquals(0.40, speeds.get("witch-shears"));
-        assertEquals(0.20, speeds.get("zeus-hoe"));
-        assertEquals(0.10, speeds.get("glacier-pickaxe"));
+        assertEquals(0.60, speeds.get("witch-shears"));
+        assertEquals(0.30, speeds.get("zeus-hoe"));
+        assertEquals(0.15, speeds.get("glacier-pickaxe"));
 
         Map<?, ?> combat = (Map<?, ?>) configuration.get("legacy-combat");
+        Map<?, ?> repair = (Map<?, ?>) combat.get("repair");
+        assertFalse(repair.containsKey("online-scan-interval-ticks"));
         Map<?, ?> protection = (Map<?, ?>) combat.get("protection-scaling");
         assertEquals(20, protection.get("vanilla-total-level-cap"));
         assertEquals(0.0022, protection.get("extra-reduction-per-excess-level"));

@@ -10,7 +10,6 @@ final class LegacyCombatConfigMapping {
     private static final List<KeyMapping> KEYS = List.of(
             key("repair.enabled", "legacy-combat.repair.enabled"),
             key("repair.minimum-protection-level", "legacy-combat.repair.minimum-protection-level"),
-            key("repair.online-scan-interval-ticks", "legacy-combat.repair.online-scan-interval-ticks"),
             key("protection-scaling.enabled", "legacy-combat.protection-scaling.enabled"),
             key("protection-scaling.vanilla-total-level-cap",
                     "legacy-combat.protection-scaling.vanilla-total-level-cap"),

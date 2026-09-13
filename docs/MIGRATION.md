@@ -18,7 +18,7 @@ Do not keep either old JAR beside TwiBoxCore. Duplicate listeners would apply th
 
 1. Move the two old JARs outside `plugins/`; keep them for rollback. Leave the old `TwilightLegacyCombatCompat/config.yml` available through the first TwiBoxCore start.
 2. Install the TwiBoxCore release JAR.
-3. Start the server once. The importer reads only seven recognized keys, writes a hash-named source backup under `plugins/TwiBoxCore/migration-backups/`, and records completion in `plugins/TwiBoxCore/migration-state.yml`.
+3. Start the server once. The importer reads only six recognized keys, writes a hash-named source backup under `plugins/TwiBoxCore/migration-backups/`, and records completion in `plugins/TwiBoxCore/migration-state.yml`.
 4. Review `plugins/TwiBoxCore/config.yml` before opening the server to players. Existing non-default TwiBoxCore values are preserved; unknown source keys are ignored.
 5. Confirm `EQUIPMENT_READY`, `COMBAT_READY`, and the final enable message appear once.
 6. Run `/twiboxcore status` and verify `legacyImport=completed`, then run `/twiboxcore selftest`.

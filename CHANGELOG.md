@@ -2,6 +2,15 @@
 
 All notable changes are documented here.
 
+## 1.2.0 - 2026-09-13
+
+- Merged strict Shopkeepers-canonical equipment synchronization into TwiBoxCore.
+- Removed gameplay PDC bookkeeping from repaired items.
+- Removed periodic full-inventory scans; synchronization is administrator-triggered.
+- Added bounded canonical refresh/export commands for audited offline migrations.
+- Preserved item amount, enchantment data, and enchantment tooltip visibility.
+- Updated special-tool final speed multipliers to 0.60, 0.30, and 0.15.
+
 ## 1.1.0 - 2026-09-12
 
 - Added a bounded one-time importer for `TwilightLegacyCombatCompat/config.yml`.

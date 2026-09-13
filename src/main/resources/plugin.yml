@@ -13,7 +13,7 @@ softdepend:
 commands:
   twiboxcore:
     description: Shows status, reloads configuration, or runs diagnostics.
-    usage: /twiboxcore <status|reload|scan|selftest>
+    usage: /twiboxcore <status|reload|scan|refresh|export|selftest>
     permission: twiboxcore.admin
     aliases: [tbc]
   twilighttool:
@@ -22,7 +22,7 @@ commands:
     permission: twilighttool.admin
   twilightcombat:
     description: Legacy alias for combat repair diagnostics.
-    usage: /twilightcombat <status|scan|selftest>
+    usage: /twilightcombat <status|scan|refresh|export|selftest>
     permission: twilightcombat.admin
 permissions:
   twiboxcore.admin:

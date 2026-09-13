@@ -1,14 +1,22 @@
 package net.twilightnw.twiboxcore.combat;
 
 import com.google.common.collect.Multimap;
+import com.nisovin.shopkeepers.api.ShopkeepersAPI;
+import com.nisovin.shopkeepers.api.shopkeeper.Shopkeeper;
+import com.nisovin.shopkeepers.api.shopkeeper.admin.regular.RegularAdminShopkeeper;
+import com.nisovin.shopkeepers.api.shopkeeper.offers.TradeOffer;
+import com.nisovin.shopkeepers.api.util.UnmodifiableItemStack;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 import java.util.logging.Level;
 import net.twilightnw.twiboxcore.TwiBoxCore;
 import org.bukkit.Material;
@@ -23,33 +31,26 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityPickupItemEvent;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.player.PlayerItemHeldEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.scheduler.BukkitTask;
 
-/** Restores legacy OP armor attributes and protection scaling on modern Paper. */
+/** Bounded legacy-combat repair and explicit Shopkeepers item synchronization. */
 public final class LegacyCombatModule implements Listener {
-    private static final int SCHEMA_VERSION = 1;
     private static final double EPSILON = 1.0E-9;
 
     private final TwiBoxCore plugin;
-    private final Set<UUID> queuedScans = new HashSet<>();
-    private final NamespacedKey repairedKey = new NamespacedKey("twilightlegacycombatcompat", "repaired_schema");
+    private final NamespacedKey repairedKey =
+            new NamespacedKey("twilightlegacycombatcompat", "repaired_schema");
     private boolean repairEnabled;
     private int minimumProtectionLevel;
     private boolean scalingEnabled;
     private ProtectionScaling scaling;
-    private BukkitTask periodicTask;
+    private List<ItemStack> canonicalTradeEquipment = List.of();
     private long repairedItems;
+    private long canonicalizedItems;
+    private long removedLegacyMarkers;
 
     public LegacyCombatModule(TwiBoxCore plugin) {
         this.plugin = plugin;
@@ -58,26 +59,23 @@ public final class LegacyCombatModule implements Listener {
     public void enable() {
         loadSettings();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
-        long interval = Math.max(20L, plugin.getConfig()
-                .getLong("legacy-combat.repair.online-scan-interval-ticks", 100L));
-        periodicTask = plugin.getServer().getScheduler()
-                .runTaskTimer(plugin, this::scanOnlinePlayers, 20L, interval);
+        refreshCanonicalCatalog();
         plugin.getLogger().info("COMBAT_READY repair=" + repairEnabled
-                + " protectionScaling=" + scalingEnabled + " scanInterval=" + interval);
+                + " protectionScaling=" + scalingEnabled
+                + " inventoryScan=manual canonicalCatalog=" + canonicalTradeEquipment.size());
     }
 
     public void disable() {
         HandlerList.unregisterAll(this);
-        if (periodicTask != null) {
-            periodicTask.cancel();
-            periodicTask = null;
-        }
-        queuedScans.clear();
+        canonicalTradeEquipment = List.of();
     }
 
     public String status() {
         return "active(repair=" + repairEnabled + ",scaling=" + scalingEnabled
-                + ",repaired=" + repairedItems + ")";
+                + ",scan=manual,repaired=" + repairedItems
+                + ",canonicalized=" + canonicalizedItems
+                + ",removedLegacyMarkers=" + removedLegacyMarkers
+                + ",catalog=" + canonicalTradeEquipment.size() + ")";
     }
 
     private void loadSettings() {
@@ -92,50 +90,11 @@ public final class LegacyCombatModule implements Listener {
                 plugin.getConfig().getDouble(root + "protection-scaling.maximum-extra-reduction", 0.35));
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
-    public void onJoin(PlayerJoinEvent event) {
-        queueScan(event.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onInventoryClick(InventoryClickEvent event) {
-        if (event.getWhoClicked() instanceof Player player) {
-            queueScan(player);
-        }
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onInventoryDrag(InventoryDragEvent event) {
-        if (event.getWhoClicked() instanceof Player player) {
-            queueScan(player);
-        }
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onPickup(EntityPickupItemEvent event) {
-        if (event.getEntity() instanceof Player player) {
-            queueScan(player);
-        }
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onHeldItem(PlayerItemHeldEvent event) {
-        queueScan(event.getPlayer());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onSwapHands(PlayerSwapHandItemsEvent event) {
-        queueScan(event.getPlayer());
-    }
-
     @SuppressWarnings("deprecation")
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onDamage(EntityDamageEvent event) {
         if (!scalingEnabled || !(event.getEntity() instanceof Player player)) {
             return;
-        }
-        if (repairEnabled) {
-            repairPlayer(player);
         }
         double extraReduction = scaling.extraReduction(totalProtectionLevel(player));
         if (extraReduction <= 0.0 || !event.isApplicable(EntityDamageEvent.DamageModifier.MAGIC)) {
@@ -154,77 +113,72 @@ public final class LegacyCombatModule implements Listener {
         }
     }
 
-    private void queueScan(Player player) {
-        if (!repairEnabled || !queuedScans.add(player.getUniqueId())) {
-            return;
-        }
-        plugin.getServer().getScheduler().runTask(plugin, () -> {
-            queuedScans.remove(player.getUniqueId());
-            if (player.isOnline()) {
-                repairPlayer(player);
-            }
-        });
-    }
-
-    private void scanOnlinePlayers() {
-        if (repairEnabled) {
-            for (Player player : plugin.getServer().getOnlinePlayers()) {
-                repairPlayer(player);
-            }
-        }
-    }
-
     public void scanNow(CommandSender sender) {
-        int repaired = 0;
+        int changed = 0;
         for (Player player : plugin.getServer().getOnlinePlayers()) {
-            repaired += repairPlayer(player);
+            changed += repairPlayer(player);
         }
-        sender.sendMessage("Scan complete: repaired=" + repaired);
+        sender.sendMessage("TwiBoxCore inventory scan complete: changed=" + changed
+                + ", online=" + plugin.getServer().getOnlinePlayers().size());
     }
 
     private int repairPlayer(Player player) {
-        int repaired = 0;
+        int changed = 0;
         PlayerInventory inventory = player.getInventory();
         ItemStack[] inventoryItems = inventory.getContents();
         int inventoryCount = repairArray(inventoryItems);
         if (inventoryCount > 0) {
             inventory.setContents(inventoryItems);
-            repaired += inventoryCount;
+            changed += inventoryCount;
         }
         ItemStack[] enderItems = player.getEnderChest().getContents();
         int enderCount = repairArray(enderItems);
         if (enderCount > 0) {
             player.getEnderChest().setContents(enderItems);
-            repaired += enderCount;
+            changed += enderCount;
         }
-        if (repaired > 0) {
-            repairedItems += repaired;
-            plugin.getLogger().info("Repaired " + repaired + " legacy combat item(s) for " + player.getName());
+        if (changed > 0) {
+            plugin.getLogger().info("Synchronized " + changed + " item(s) for " + player.getName());
         }
-        return repaired;
+        return changed;
     }
 
     private int repairArray(ItemStack[] items) {
-        int repaired = 0;
-        for (ItemStack item : items) {
-            if (repairItem(item)) {
-                repaired++;
+        int changedItems = 0;
+        for (int index = 0; index < items.length; index++) {
+            ItemStack item = items[index];
+            boolean changed = repairItem(item);
+            ItemStack canonical = canonicalReplacement(item);
+            if (canonical != null) {
+                items[index] = canonical;
+                canonicalizedItems++;
+                changed = true;
+            }
+            if (changed) {
+                changedItems++;
             }
         }
-        return repaired;
+        return changedItems;
     }
 
     private boolean repairItem(ItemStack item) {
-        if (item == null || item.getType().isAir() || !item.hasItemMeta()) {
+        if (!repairEnabled || item == null || item.getType().isAir() || !item.hasItemMeta()) {
             return false;
         }
         ItemMeta meta = item.getItemMeta();
-        if (!meta.hasAttributeModifiers()) {
-            return false;
+        boolean changed = false;
+        if (meta.getPersistentDataContainer().has(repairedKey)) {
+            meta.getPersistentDataContainer().remove(repairedKey);
+            removedLegacyMarkers++;
+            changed = true;
         }
         Multimap<Attribute, AttributeModifier> modifiers = meta.getAttributeModifiers();
         if (modifiers == null || modifiers.isEmpty()) {
-            return false;
+            if (changed) {
+                item.setItemMeta(meta);
+                repairedItems++;
+            }
+            return changed;
         }
         List<Map.Entry<Attribute, AttributeModifier>> dummyEntries = new ArrayList<>();
         for (Map.Entry<Attribute, AttributeModifier> entry : modifiers.entries()) {
@@ -236,7 +190,11 @@ public final class LegacyCombatModule implements Listener {
             }
         }
         if (dummyEntries.isEmpty()) {
-            return false;
+            if (changed) {
+                item.setItemMeta(meta);
+                repairedItems++;
+            }
+            return changed;
         }
         boolean dummyOnly = dummyEntries.size() == modifiers.size();
         for (Map.Entry<Attribute, AttributeModifier> entry : dummyEntries) {
@@ -250,9 +208,213 @@ public final class LegacyCombatModule implements Listener {
         } else if (dummyOnly) {
             meta.setAttributeModifiers(null);
         }
-        meta.getPersistentDataContainer().set(repairedKey, PersistentDataType.INTEGER, SCHEMA_VERSION);
         item.setItemMeta(meta);
+        repairedItems++;
         return true;
+    }
+
+    public int refreshCanonicalCatalog() {
+        if (!plugin.getServer().getPluginManager().isPluginEnabled("Shopkeepers")) {
+            canonicalTradeEquipment = List.of();
+            plugin.getLogger().warning("Shopkeepers is unavailable; canonical synchronization is disabled.");
+            return 0;
+        }
+        if (!ShopkeepersAPI.isEnabled()) {
+            canonicalTradeEquipment = List.of();
+            plugin.getLogger().warning("Shopkeepers API is not ready; canonical synchronization is disabled.");
+            return 0;
+        }
+        List<ItemStack> catalog = new ArrayList<>();
+        for (Shopkeeper shopkeeper : ShopkeepersAPI.getShopkeeperRegistry().getAllShopkeepers()) {
+            if (!(shopkeeper instanceof RegularAdminShopkeeper adminShopkeeper)) {
+                continue;
+            }
+            for (TradeOffer offer : adminShopkeeper.getOffers()) {
+                addCanonical(catalog, offer.getResultItem());
+                addCanonical(catalog, offer.getItem1());
+                if (offer.hasItem2()) {
+                    addCanonical(catalog, offer.getItem2());
+                }
+            }
+        }
+        canonicalTradeEquipment = List.copyOf(catalog);
+        plugin.getLogger().info("CATALOG_READY items=" + catalog.size());
+        return catalog.size();
+    }
+
+    private void addCanonical(List<ItemStack> catalog, UnmodifiableItemStack source) {
+        if (source == null) {
+            return;
+        }
+        ItemStack item = source.copy();
+        if (!isEquipment(item.getType()) || !item.hasItemMeta()) {
+            return;
+        }
+        item.setAmount(1);
+        for (ItemStack existing : catalog) {
+            if (existing.isSimilar(item)) {
+                return;
+            }
+        }
+        catalog.add(item);
+    }
+
+    private ItemStack canonicalReplacement(ItemStack source) {
+        if (source == null || source.getType().isAir() || !source.hasItemMeta()
+                || !isEquipment(source.getType()) || canonicalTradeEquipment.isEmpty()) {
+            return null;
+        }
+        ItemStack selected = null;
+        ItemStack normalizedSource = comparisonCopy(source);
+        for (ItemStack candidate : canonicalTradeEquipment) {
+            if (candidate.getType() != source.getType()) {
+                continue;
+            }
+            if (candidate.isSimilar(source)) {
+                return null;
+            }
+            if (!comparisonCopy(candidate).isSimilar(normalizedSource)) {
+                continue;
+            }
+            if (selected != null && !selected.isSimilar(candidate)) {
+                return null;
+            }
+            selected = candidate;
+        }
+        if (selected == null) {
+            return null;
+        }
+        ItemStack replacement = selected.clone();
+        replacement.setAmount(source.getAmount());
+        return replacement;
+    }
+
+    private ItemStack comparisonCopy(ItemStack source) {
+        ItemStack copy = source.clone();
+        copy.setAmount(1);
+        if (!copy.hasItemMeta()) {
+            return copy;
+        }
+        ItemMeta meta = copy.getItemMeta();
+        meta.getPersistentDataContainer().remove(repairedKey);
+        Multimap<Attribute, AttributeModifier> modifiers = meta.getAttributeModifiers();
+        if (modifiers != null && !modifiers.isEmpty()) {
+            List<ModifierSpec> specs = modifiers.entries().stream()
+                    .map(entry -> new ModifierSpec(entry.getKey(), entry.getValue().getAmount(),
+                            entry.getValue().getOperation(), entry.getValue().getSlotGroup()))
+                    .sorted(Comparator
+                            .comparing((ModifierSpec spec) -> spec.attribute().getKey().toString())
+                            .thenComparingDouble(ModifierSpec::amount)
+                            .thenComparing(spec -> spec.operation().name())
+                            .thenComparing(spec -> spec.slotGroup().toString()))
+                    .toList();
+            meta.setAttributeModifiers(null);
+            for (int index = 0; index < specs.size(); index++) {
+                ModifierSpec spec = specs.get(index);
+                meta.addAttributeModifier(spec.attribute(), new AttributeModifier(
+                        new NamespacedKey("twilightcompare", "modifier_" + index),
+                        spec.amount(), spec.operation(), spec.slotGroup()));
+            }
+        }
+        copy.setItemMeta(meta);
+        return copy;
+    }
+
+    public int exportCanonicalCatalog() throws IOException {
+        Path exportDirectory = plugin.getDataFolder().toPath().resolve("canonical-export");
+        Files.createDirectories(exportDirectory);
+        try (var paths = Files.list(exportDirectory)) {
+            for (Path path : paths.filter(candidate -> candidate.getFileName().toString()
+                    .matches("canonical-[0-9]{5}\\.nbt")).toList()) {
+                Files.delete(path);
+            }
+        }
+        List<String> manifest = new ArrayList<>();
+        for (int index = 0; index < canonicalTradeEquipment.size(); index++) {
+            ItemStack item = canonicalTradeEquipment.get(index);
+            String fileName = String.format(Locale.ROOT, "canonical-%05d.nbt", index);
+            Files.write(exportDirectory.resolve(fileName), item.serializeAsBytes(),
+                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,
+                    StandardOpenOption.WRITE);
+            manifest.add(index + "\t" + item.getType().getKey() + "\t" + fileName);
+        }
+        Files.write(exportDirectory.resolve("manifest.tsv"), manifest, StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,
+                StandardOpenOption.WRITE);
+        return canonicalTradeEquipment.size();
+    }
+
+    public boolean handleCommand(CommandSender sender, String[] args) {
+        String subcommand = args.length == 0 ? "status" : args[0].toLowerCase(Locale.ROOT);
+        return switch (subcommand) {
+            case "status" -> {
+                sender.sendMessage("TwiBoxCore legacy combat: " + status());
+                yield true;
+            }
+            case "scan" -> {
+                scanNow(sender);
+                yield true;
+            }
+            case "refresh" -> {
+                sender.sendMessage("CATALOG_REFRESH=PASS items=" + refreshCanonicalCatalog());
+                yield true;
+            }
+            case "export" -> {
+                try {
+                    sender.sendMessage("CATALOG_EXPORT=PASS items=" + exportCanonicalCatalog());
+                } catch (IOException exception) {
+                    plugin.getLogger().log(Level.SEVERE, "Could not export canonical catalog", exception);
+                    sender.sendMessage("CATALOG_EXPORT=FAIL");
+                }
+                yield true;
+            }
+            case "selftest" -> {
+                sender.sendMessage("SELFTEST=" + (selfTest(sender) ? "PASS" : "FAIL"));
+                yield true;
+            }
+            default -> false;
+        };
+    }
+
+    public boolean selfTest(CommandSender sender) {
+        try {
+            ItemStack helmet = new ItemStack(Material.LEATHER_HELMET);
+            helmet.addUnsafeEnchantment(Enchantment.PROTECTION, 38);
+            addDummyAttribute(helmet);
+            require(repairItem(helmet), "helmet was not selected for repair");
+            require(!helmet.getItemMeta().getPersistentDataContainer().has(repairedKey),
+                    "a gameplay bookkeeping marker was persisted");
+            require(attributeAmount(helmet, Attribute.ARMOR) == 8.0, "Prot 38 helmet armor is not 8");
+            require(attributeAmount(helmet, Attribute.ARMOR_TOUGHNESS) == 3.0,
+                    "Prot 38 helmet toughness is not 3");
+            require(attributeAmount(helmet, Attribute.KNOCKBACK_RESISTANCE) == 0.1,
+                    "Prot 38 helmet knockback resistance is not 0.1");
+            require(attributeCount(helmet, Attribute.GRAVITY) == 0, "dummy gravity modifier remains");
+
+            ItemStack sword = new ItemStack(Material.DIAMOND_SWORD);
+            sword.addUnsafeEnchantment(Enchantment.SHARPNESS, 27);
+            addDummyAttribute(sword);
+            require(repairItem(sword), "sword was not selected for repair");
+            require(!sword.getItemMeta().hasAttributeModifiers(), "sword defaults remain suppressed");
+            require(sword.getEnchantmentLevel(Enchantment.SHARPNESS) == 27, "unsafe sharpness changed");
+
+            int[] totals = {20, 60, 80, 92, 112, 132, 152, 180};
+            double previous = -1.0;
+            for (int total : totals) {
+                double reduction = scaling.extraReduction(total);
+                require(reduction + EPSILON >= previous, "protection scaling is not monotonic");
+                previous = reduction;
+            }
+            require(previous <= scaling.maximumExtraReduction() + EPSILON,
+                    "protection scaling exceeds cap");
+            require(runCanonicalComparisonSelfTest(), "canonical modifier-ID comparison failed");
+            sender.sendMessage("Combat self-test: PASS");
+            return true;
+        } catch (IllegalStateException exception) {
+            sender.sendMessage("Combat self-test: FAIL (" + exception.getMessage() + ")");
+            plugin.getLogger().log(Level.SEVERE, "Combat self-test failed", exception);
+            return false;
+        }
     }
 
     private void addCanonicalArmorModifiers(ItemMeta meta, ArmorSlot slot, int protectionLevel) {
@@ -280,60 +442,16 @@ public final class LegacyCombatModule implements Listener {
         return total;
     }
 
-    public boolean handleCommand(CommandSender sender, String[] args) {
-        String subcommand = args.length == 0 ? "status" : args[0].toLowerCase(Locale.ROOT);
-        return switch (subcommand) {
-            case "status" -> {
-                sender.sendMessage("TwiBoxCore legacy combat: " + status());
-                yield true;
-            }
-            case "scan" -> {
-                scanNow(sender);
-                yield true;
-            }
-            case "selftest" -> {
-                sender.sendMessage("SELFTEST=" + (selfTest(sender) ? "PASS" : "FAIL"));
-                yield true;
-            }
-            default -> false;
-        };
-    }
-
-    public boolean selfTest(CommandSender sender) {
-        try {
-            ItemStack helmet = new ItemStack(Material.LEATHER_HELMET);
-            helmet.addUnsafeEnchantment(Enchantment.PROTECTION, 38);
-            addDummyAttribute(helmet);
-            require(repairItem(helmet), "helmet was not selected for repair");
-            require(attributeAmount(helmet, Attribute.ARMOR) == 8.0, "Prot 38 helmet armor is not 8");
-            require(attributeAmount(helmet, Attribute.ARMOR_TOUGHNESS) == 3.0,
-                    "Prot 38 helmet toughness is not 3");
-            require(attributeAmount(helmet, Attribute.KNOCKBACK_RESISTANCE) == 0.1,
-                    "Prot 38 helmet knockback resistance is not 0.1");
-            require(attributeCount(helmet, Attribute.GRAVITY) == 0, "dummy gravity modifier remains");
-
-            ItemStack sword = new ItemStack(Material.DIAMOND_SWORD);
-            sword.addUnsafeEnchantment(Enchantment.SHARPNESS, 27);
-            addDummyAttribute(sword);
-            require(repairItem(sword), "sword was not selected for repair");
-            require(!sword.getItemMeta().hasAttributeModifiers(), "sword defaults remain suppressed");
-            require(sword.getEnchantmentLevel(Enchantment.SHARPNESS) == 27, "unsafe sharpness changed");
-
-            int[] totals = {20, 60, 80, 92, 112, 132, 152, 180};
-            double previous = -1.0;
-            for (int total : totals) {
-                double reduction = scaling.extraReduction(total);
-                require(reduction + EPSILON >= previous, "protection scaling is not monotonic");
-                previous = reduction;
-            }
-            require(previous <= scaling.maximumExtraReduction() + EPSILON, "protection scaling exceeds cap");
-            sender.sendMessage("Combat self-test: PASS");
-            return true;
-        } catch (IllegalStateException exception) {
-            sender.sendMessage("Combat self-test: FAIL (" + exception.getMessage() + ")");
-            plugin.getLogger().log(Level.SEVERE, "Combat self-test failed", exception);
-            return false;
-        }
+    private boolean isEquipment(Material material) {
+        String name = material.name();
+        return name.endsWith("_SWORD") || name.endsWith("_PICKAXE") || name.endsWith("_AXE")
+                || name.endsWith("_SHOVEL") || name.endsWith("_HOE") || name.endsWith("_HELMET")
+                || name.endsWith("_CHESTPLATE") || name.endsWith("_LEGGINGS") || name.endsWith("_BOOTS")
+                || material == Material.SHEARS || material == Material.BOW || material == Material.CROSSBOW
+                || material == Material.TRIDENT || material == Material.MACE || material == Material.SHIELD
+                || material == Material.ELYTRA || material == Material.FISHING_ROD
+                || material == Material.CARROT_ON_A_STICK || material == Material.WARPED_FUNGUS_ON_A_STICK
+                || material == Material.BRUSH || material == Material.FLINT_AND_STEEL;
     }
 
     private void addDummyAttribute(ItemStack item) {
@@ -342,6 +460,24 @@ public final class LegacyCombatModule implements Listener {
                 new AttributeModifier(new NamespacedKey("playerkits2", "dummy_attribute"), 0.0,
                         AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.FEET));
         item.setItemMeta(meta);
+    }
+
+    private boolean runCanonicalComparisonSelfTest() {
+        ItemStack first = new ItemStack(Material.DIAMOND_CHESTPLATE);
+        ItemStack second = first.clone();
+        ItemMeta firstMeta = first.getItemMeta();
+        ItemMeta secondMeta = second.getItemMeta();
+        firstMeta.addEnchant(Enchantment.PROTECTION, 38, true);
+        secondMeta.addEnchant(Enchantment.PROTECTION, 38, true);
+        firstMeta.addAttributeModifier(Attribute.ARMOR, new AttributeModifier(
+                new NamespacedKey("twilight", "selftest_first"), 12.0,
+                AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.CHEST));
+        secondMeta.addAttributeModifier(Attribute.ARMOR, new AttributeModifier(
+                new NamespacedKey("twilight", "selftest_second"), 12.0,
+                AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.CHEST));
+        first.setItemMeta(firstMeta);
+        second.setItemMeta(secondMeta);
+        return !first.isSimilar(second) && comparisonCopy(first).isSimilar(comparisonCopy(second));
     }
 
     private double attributeAmount(ItemStack item, Attribute attribute) {
@@ -358,6 +494,10 @@ public final class LegacyCombatModule implements Listener {
         if (!condition) {
             throw new IllegalStateException(message);
         }
+    }
+
+    private record ModifierSpec(Attribute attribute, double amount,
+            AttributeModifier.Operation operation, EquipmentSlotGroup slotGroup) {
     }
 
     private enum ArmorSlot {
