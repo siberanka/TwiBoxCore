@@ -51,12 +51,17 @@ public final class TwiBoxCore extends JavaPlugin {
                 "warp", "ewarp", "essentials:warp"));
         changed |= setIfMissing("warp-tab-filter.hidden-first-arguments", java.util.List.of(
                 "atlantistenspawna", "enddenspawna", "netherdenspawna",
-                "siberdenspawna", "so_ukdiyardanspawna"));
+                "siberdenspawna", "so_ukdiyardanspawna", "soğukdiyardanspawna"));
+        changed |= appendMissing("warp-tab-filter.hidden-first-arguments",
+                java.util.List.of("soğukdiyardanspawna"));
+        changed |= setIfMissing("warp-tab-filter.visible-first-arguments", java.util.List.of(
+                "atlantis", "boss", "end", "kasa", "kasalar", "kasılma", "nether",
+                "shulker", "siber", "soğukdiyar", "spawn", "takas"));
         changed |= setIfMissing("modules.warp-menu", true);
         changed |= setIfMissing("warp-menu.commands", java.util.List.of("warp"));
         changed |= setIfMissing("warp-menu.menu", "warplar");
-        if (getConfig().getInt("config-version", 0) < 7) {
-            getConfig().set("config-version", 7);
+        if (getConfig().getInt("config-version", 0) < 8) {
+            getConfig().set("config-version", 8);
             changed = true;
         }
         if (changed) {
@@ -71,6 +76,21 @@ public final class TwiBoxCore extends JavaPlugin {
         }
         getConfig().set(path, value);
         return true;
+    }
+
+    private boolean appendMissing(String path, java.util.List<String> requiredValues) {
+        java.util.List<String> current = new java.util.ArrayList<>(getConfig().getStringList(path));
+        boolean changed = false;
+        for (String required : requiredValues) {
+            if (current.stream().noneMatch(existing -> existing.equalsIgnoreCase(required))) {
+                current.add(required);
+                changed = true;
+            }
+        }
+        if (changed) {
+            getConfig().set(path, current);
+        }
+        return changed;
     }
 
     @Override

@@ -30,7 +30,7 @@ class DescriptorTest {
     @Test
     void defaultConfigurationEnablesBothModules() {
         Map<String, Object> configuration = yaml("config.yml");
-        assertEquals(7, configuration.get("config-version"));
+        assertEquals(8, configuration.get("config-version"));
 
         Map<?, ?> migration = (Map<?, ?>) configuration.get("migration");
         assertEquals(Boolean.TRUE, migration.get("import-legacy-configs"));
@@ -46,7 +46,9 @@ class DescriptorTest {
         assertEquals(java.util.List.of("warp", "ewarp", "essentials:warp"), warpTab.get("commands"));
         assertEquals(java.util.List.of(
                 "atlantistenspawna", "enddenspawna", "netherdenspawna",
-                "siberdenspawna", "so_ukdiyardanspawna"), warpTab.get("hidden-first-arguments"));
+                "siberdenspawna", "so_ukdiyardanspawna", "soğukdiyardanspawna"),
+                warpTab.get("hidden-first-arguments"));
+        assertTrue(((java.util.List<?>) warpTab.get("visible-first-arguments")).contains("end"));
 
         Map<?, ?> warpMenu = (Map<?, ?>) configuration.get("warp-menu");
         assertEquals(java.util.List.of("warp"), warpMenu.get("commands"));

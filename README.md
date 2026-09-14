@@ -38,6 +38,9 @@ TwiBoxCore is a focused Paper/Leaf plugin for restricted mining tools, high-leve
 
 - Leaves EssentialsX authoritative for permission-aware warp suggestions.
 - Removes only configured internal return warps from the first `/warp` argument.
+- Restores a configured public warp only when the player already has its exact
+  `essentials.warps.<name>` permission; it never grants or reveals access.
+- Matches Essentials' Unicode internal warp names as well as legacy file names.
 - Preserves rich asynchronous completion tooltips.
 - The completion filter never owns, cancels, dispatches, or executes a command and never marks asynchronous completion handled.
 - Uses immutable configuration and bounded exact-string matching; it performs no regex, network, disk, scheduler, or Netty work per request.
@@ -46,6 +49,8 @@ TwiBoxCore is a focused Paper/Leaf plugin for restricted mining tools, high-leve
 
 - Intercepts only an exact, argument-free `/warp` and opens the configured DeluxeMenus menu.
 - Leaves `/warp end`, `/warp nether`, aliases with arguments, and all EssentialsX permission checks untouched.
+- Registers safely during the early startup phase and waits for normal server
+  readiness before a player can invoke DeluxeMenus.
 - Validates the fixed menu identifier and server-provided Minecraft player name before dispatching the bounded console command.
 
 TwiBoxCore opens no network sockets, makes no outbound requests, and contains no telemetry, updater, webhook, licensing check, credentials, server address, or player data.

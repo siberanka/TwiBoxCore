@@ -8,6 +8,9 @@ All notable changes are documented here.
 - Opens the configured `warplar` DeluxeMenus menu while leaving every argument-bearing warp command to EssentialsX.
 - Added bounded command/menu/player-name validation and positive, negative, malformed, and injection-focused tests.
 - Kept the permission-aware warp completion filter independent from command execution.
+- Reconciled missing public suggestions only after checking the exact EssentialsX
+  per-warp permission, and hid the Unicode `soğukdiyardanspawna` internal warp.
+- Made bare-warp routing independent of DeluxeMenus' later enable phase.
 
 ## 1.6.0 - 2026-09-14
 

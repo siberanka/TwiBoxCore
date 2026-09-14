@@ -13,7 +13,8 @@ import org.junit.jupiter.api.Test;
 class WarpTabFilterTest {
     private final WarpTabFilter filter = new WarpTabFilter(
             List.of("warp", "/EWARP", "essentials:warp"),
-            List.of("enddenspawna", "netherdenspawna", "siberdenspawna"));
+            List.of("enddenspawna", "netherdenspawna", "siberdenspawna", "soğukdiyardanspawna"),
+            List.of("end", "nether", "soğukdiyar"));
 
     @Test
     void removesOnlyExactHiddenFirstArguments() {
@@ -61,7 +62,8 @@ class WarpTabFilterTest {
     void rejectsMalformedConfigurationTokensWithoutRegexOrPrefixMatching() {
         WarpTabFilter hardened = new WarpTabFilter(
                 List.of("warp", "warp injected", "x".repeat(65)),
-                List.of("enddenspawna", "bad token", "x".repeat(129)));
+                List.of("enddenspawna", "bad token", "x".repeat(129)),
+                List.of("end", "bad token", "x".repeat(129)));
 
         assertEquals(1, hardened.commandCount());
         assertEquals(1, hardened.hiddenArgumentCount());
@@ -79,6 +81,29 @@ class WarpTabFilterTest {
 
         assertEquals(List.of(visible), result.suggestions());
         assertSame(visible, result.suggestions().getFirst());
+    }
+
+    @Test
+    void restoresOnlyPermissionGrantedVisibleWarpsAndHidesUnicodeReturnWarp() {
+        WarpTabFilter.FilterResult<String> result = filter.reconcileStrings(
+                "/warp ", List.of("boss", "soğukdiyardanspawna"),
+                candidate -> candidate.equals("end"));
+
+        assertTrue(result.changed());
+        assertEquals(List.of("boss", "end"), result.suggestions());
+    }
+
+    @Test
+    void doesNotRevealPermissionlessOrPrefixMismatchedWarps() {
+        List<String> input = List.of("boss");
+        WarpTabFilter.FilterResult<String> denied = filter.reconcileStrings(
+                "/warp ", input, candidate -> false);
+        WarpTabFilter.FilterResult<String> prefix = filter.reconcileStrings(
+                "/warp n", input, candidate -> true);
+
+        assertSame(input, denied.suggestions());
+        assertFalse(denied.changed());
+        assertEquals(List.of("boss", "nether"), prefix.suggestions());
     }
 
     @Test

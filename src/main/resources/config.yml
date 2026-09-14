@@ -1,4 +1,4 @@
-config-version: 7
+config-version: 8
 
 migration:
   # Imports recognized legacy Twilight plugin configs once. Source files are
@@ -23,6 +23,22 @@ warp-tab-filter:
     - netherdenspawna
     - siberdenspawna
     - so_ukdiyardanspawna
+    - soğukdiyardanspawna
+  # Essentials remains the authority: a missing entry is restored only when
+  # the player already has essentials.warps.<name>.
+  visible-first-arguments:
+    - atlantis
+    - boss
+    - end
+    - kasa
+    - kasalar
+    - kasılma
+    - nether
+    - shulker
+    - siber
+    - soğukdiyar
+    - spawn
+    - takas
 
 # Exact bare /warp opens the configured DeluxeMenus menu. Commands containing
 # an argument continue to EssentialsX without any interception.

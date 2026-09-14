@@ -27,15 +27,13 @@ public final class WarpMenuModule implements Listener {
     }
 
     public void enable() {
-        if (!plugin.getServer().getPluginManager().isPluginEnabled("DeluxeMenus")) {
-            plugin.getLogger().warning("WARP_MENU_DISABLED reason=DeluxeMenus-not-enabled");
-            return;
-        }
         List<String> commands = plugin.getConfig().getStringList("warp-menu.commands");
         matcher = new BareWarpCommandMatcher(commands.isEmpty() ? DEFAULT_COMMANDS : commands);
         menu = normalizeMenu(plugin.getConfig().getString("warp-menu.menu", DEFAULT_MENU));
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
-        plugin.getLogger().info("WARP_MENU_READY commands=" + matcher.labelCount() + " menu=" + menu);
+        plugin.getLogger().info("WARP_MENU_READY commands=" + matcher.labelCount() + " menu=" + menu
+                + " deluxeMenus=" + (plugin.getServer().getPluginManager().isPluginEnabled("DeluxeMenus")
+                ? "enabled" : "awaiting-enable"));
     }
 
     public void disable() {
