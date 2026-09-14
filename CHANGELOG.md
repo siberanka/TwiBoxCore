@@ -2,6 +2,13 @@
 
 All notable changes are documented here.
 
+## 1.6.0 - 2026-09-14
+
+- Replaced the reflective Skript warp suggestion generator with a bounded native Paper event filter.
+- Kept EssentialsX permissions authoritative and removed only configured internal first-argument warps.
+- Preserved rich asynchronous completion objects and tooltips without marking requests handled or cancelled.
+- Added immutable exact-match filtering, malformed-config rejection, alias coverage, and positive/negative tests.
+
 ## 1.5.0 - 2026-09-14
 
 - Integrated the complete entity-free FancyNpcs Shopkeepers object lifecycle.

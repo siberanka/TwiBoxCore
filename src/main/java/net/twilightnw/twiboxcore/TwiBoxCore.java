@@ -5,6 +5,7 @@ import net.twilightnw.twiboxcore.combat.LegacyCombatModule;
 import net.twilightnw.twiboxcore.equipment.EquipmentEffectsModule;
 import net.twilightnw.twiboxcore.migration.LegacyConfigMigrator;
 import net.twilightnw.twiboxcore.shopbridge.ShopkeepersFancyNpcsModule;
+import net.twilightnw.twiboxcore.warptab.WarpTabFilterModule;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -13,6 +14,7 @@ public final class TwiBoxCore extends JavaPlugin {
     private EquipmentEffectsModule equipmentEffects;
     private LegacyCombatModule legacyCombat;
     private ShopkeepersFancyNpcsModule shopBridge;
+    private WarpTabFilterModule warpTabFilter;
     private String migrationStatus = "not-run";
 
     @Override
@@ -24,7 +26,7 @@ public final class TwiBoxCore extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        materializeShopBridgeDefaults();
+        materializeDefaults();
         LegacyConfigMigrator.Result migration = LegacyConfigMigrator.run(this);
         migrationStatus = migration.status();
         if (migration.configChanged()) {
@@ -34,7 +36,7 @@ public final class TwiBoxCore extends JavaPlugin {
         getLogger().info("TwiBoxCore " + getPluginMeta().getVersion() + " enabled.");
     }
 
-    private void materializeShopBridgeDefaults() {
+    private void materializeDefaults() {
         boolean changed = false;
         changed |= setIfMissing("modules.shopkeepers-fancynpcs", true);
         changed |= setIfMissing("shopkeepers-fancynpcs.admin-edit.enabled", true);
@@ -42,13 +44,19 @@ public final class TwiBoxCore extends JavaPlugin {
         changed |= setIfMissing("shopkeepers-fancynpcs.admin-edit.cooldown-ticks", 10L);
         changed |= setIfMissing("shopkeepers-fancynpcs.admin-edit.required-permissions", java.util.List.of(
                 "fancynpcs.command.npc.action.add", "shopkeeper.admin", "shopkeeper.remoteedit"));
-        if (getConfig().getInt("config-version", 0) < 5) {
-            getConfig().set("config-version", 5);
+        changed |= setIfMissing("modules.warp-tab-filter", true);
+        changed |= setIfMissing("warp-tab-filter.commands", java.util.List.of(
+                "warp", "ewarp", "essentials:warp"));
+        changed |= setIfMissing("warp-tab-filter.hidden-first-arguments", java.util.List.of(
+                "atlantistenspawna", "enddenspawna", "netherdenspawna",
+                "siberdenspawna", "so_ukdiyardanspawna"));
+        if (getConfig().getInt("config-version", 0) < 6) {
+            getConfig().set("config-version", 6);
             changed = true;
         }
         if (changed) {
             saveConfig();
-            getLogger().info("Materialized Shopkeepers/FancyNpcs settings without changing existing values.");
+            getLogger().info("Materialized missing module defaults without changing existing values.");
         }
     }
 
@@ -81,6 +89,10 @@ public final class TwiBoxCore extends JavaPlugin {
             legacyCombat = new LegacyCombatModule(this);
             legacyCombat.enable();
         }
+        if (getConfig().getBoolean("modules.warp-tab-filter", true)) {
+            warpTabFilter = new WarpTabFilterModule(this);
+            warpTabFilter.enable();
+        }
     }
 
     private void stopModules() {
@@ -94,6 +106,10 @@ public final class TwiBoxCore extends JavaPlugin {
         if (legacyCombat != null) {
             legacyCombat.disable();
             legacyCombat = null;
+        }
+        if (warpTabFilter != null) {
+            warpTabFilter.disable();
+            warpTabFilter = null;
         }
         getServer().getScheduler().cancelTasks(this);
     }
@@ -122,6 +138,7 @@ public final class TwiBoxCore extends JavaPlugin {
                         + ": equipment=" + (equipmentEffects == null ? "disabled" : equipmentEffects.status())
                         + ", combat=" + (legacyCombat == null ? "disabled" : legacyCombat.status())
                         + ", shopBridge=" + (shopBridge == null ? "disabled" : shopBridge.status())
+                        + ", warpTab=" + (warpTabFilter == null ? "disabled" : warpTabFilter.status())
                         + ", legacyImport=" + migrationStatus);
                 return true;
             }
@@ -166,8 +183,9 @@ public final class TwiBoxCore extends JavaPlugin {
                 boolean equipmentPassed = equipmentEffects == null || equipmentEffects.selfTest(sender);
                 boolean combatPassed = legacyCombat == null || legacyCombat.selfTest(sender);
                 boolean bridgePassed = shopBridge == null || shopBridge.selfTest(sender);
+                boolean warpTabPassed = warpTabFilter == null || warpTabFilter.selfTest(sender);
                 sender.sendMessage("TwiBoxCore SELFTEST="
-                        + (equipmentPassed && combatPassed && bridgePassed ? "PASS" : "FAIL"));
+                        + (equipmentPassed && combatPassed && bridgePassed && warpTabPassed ? "PASS" : "FAIL"));
                 return true;
             }
             default -> {

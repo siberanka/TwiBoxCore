@@ -29,7 +29,7 @@ class DescriptorTest {
     @Test
     void defaultConfigurationEnablesBothModules() {
         Map<String, Object> configuration = yaml("config.yml");
-        assertEquals(5, configuration.get("config-version"));
+        assertEquals(6, configuration.get("config-version"));
 
         Map<?, ?> migration = (Map<?, ?>) configuration.get("migration");
         assertEquals(Boolean.TRUE, migration.get("import-legacy-configs"));
@@ -38,6 +38,13 @@ class DescriptorTest {
         assertEquals(Boolean.TRUE, modules.get("equipment-effects"));
         assertEquals(Boolean.TRUE, modules.get("legacy-combat"));
         assertEquals(Boolean.TRUE, modules.get("shopkeepers-fancynpcs"));
+        assertEquals(Boolean.TRUE, modules.get("warp-tab-filter"));
+
+        Map<?, ?> warpTab = (Map<?, ?>) configuration.get("warp-tab-filter");
+        assertEquals(java.util.List.of("warp", "ewarp", "essentials:warp"), warpTab.get("commands"));
+        assertEquals(java.util.List.of(
+                "atlantistenspawna", "enddenspawna", "netherdenspawna",
+                "siberdenspawna", "so_ukdiyardanspawna"), warpTab.get("hidden-first-arguments"));
 
         Map<?, ?> bridge = (Map<?, ?>) configuration.get("shopkeepers-fancynpcs");
         Map<?, ?> adminEdit = (Map<?, ?>) bridge.get("admin-edit");

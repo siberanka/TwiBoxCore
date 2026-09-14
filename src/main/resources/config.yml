@@ -1,4 +1,4 @@
-config-version: 5
+config-version: 6
 
 migration:
   # Imports recognized legacy Twilight plugin configs once. Source files are
@@ -9,6 +9,19 @@ modules:
   equipment-effects: true
   legacy-combat: true
   shopkeepers-fancynpcs: true
+  warp-tab-filter: true
+
+# EssentialsX remains authoritative for which warps a player may see. This
+# module only removes internal return warps from first-argument suggestions.
+# It never cancels command execution and never marks async completion handled.
+warp-tab-filter:
+  commands: [warp, ewarp, essentials:warp]
+  hidden-first-arguments:
+    - atlantistenspawna
+    - enddenspawna
+    - netherdenspawna
+    - siberdenspawna
+    - so_ukdiyardanspawna
 
 shopkeepers-fancynpcs:
   # Sneak + right-click opens the editor only after every permission below is
