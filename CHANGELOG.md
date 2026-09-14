@@ -2,6 +2,14 @@
 
 All notable changes are documented here.
 
+## 1.5.0 - 2026-09-14
+
+- Integrated the complete entity-free FancyNpcs Shopkeepers object lifecycle.
+- Preserved existing `fancynpc` shop data, optional `npcId` values, virtual spawn IDs, and delayed NPC equipment refreshes.
+- Added a guarded sneak-right-click administrator editor using the Shopkeepers API directly.
+- Added strict UUID action parsing, bidirectional NPC identity validation, all-of permission checks, distance and cooldown bounds, main-thread revalidation, and injection-focused negative tests.
+- Added hard startup dependencies so saved custom shop objects are registered before deserialization.
+
 ## 1.4.0 - 2026-09-14
 
 - Added a throttled action-bar warning when restricted mine blocks are struck with the wrong tool.

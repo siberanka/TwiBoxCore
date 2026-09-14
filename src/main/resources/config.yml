@@ -1,4 +1,4 @@
-config-version: 4
+config-version: 5
 
 migration:
   # Imports recognized legacy Twilight plugin configs once. Source files are
@@ -8,6 +8,19 @@ migration:
 modules:
   equipment-effects: true
   legacy-combat: true
+  shopkeepers-fancynpcs: true
+
+shopkeepers-fancynpcs:
+  # Sneak + right-click opens the editor only after every permission below is
+  # verified. Normal clicks retain the NPC's configured trading action.
+  admin-edit:
+    enabled: true
+    max-distance: 8.0
+    cooldown-ticks: 10
+    required-permissions:
+      - fancynpcs.command.npc.action.add
+      - shopkeeper.admin
+      - shopkeeper.remoteedit
 
 # These defaults preserve the behavior of the two original compatibility
 # plugins. World names and material rules can be adjusted for another server.

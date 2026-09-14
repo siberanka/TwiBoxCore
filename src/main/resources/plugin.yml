@@ -4,11 +4,14 @@ main: net.twilightnw.twiboxcore.TwiBoxCore
 api-version: '1.21'
 author: siberanka
 description: Modern BoxPVP equipment and legacy combat compatibility core.
+load: STARTUP
+depend:
+  - Shopkeepers
+  - FancyNpcs
 softdepend:
   - ItemTag
   - ItemEdit
   - PlayerKits2
-  - Shopkeepers
   - ExcellentCrates
 commands:
   twiboxcore:

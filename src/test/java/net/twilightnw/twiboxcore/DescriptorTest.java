@@ -17,6 +17,8 @@ class DescriptorTest {
         assertEquals("TwiBoxCore", descriptor.get("name"));
         assertEquals("net.twilightnw.twiboxcore.TwiBoxCore", descriptor.get("main"));
         assertEquals("1.21", descriptor.get("api-version"));
+        assertEquals("STARTUP", descriptor.get("load"));
+        assertEquals(java.util.List.of("Shopkeepers", "FancyNpcs"), descriptor.get("depend"));
 
         Map<?, ?> commands = (Map<?, ?>) descriptor.get("commands");
         assertTrue(commands.containsKey("twiboxcore"));
@@ -27,7 +29,7 @@ class DescriptorTest {
     @Test
     void defaultConfigurationEnablesBothModules() {
         Map<String, Object> configuration = yaml("config.yml");
-        assertEquals(4, configuration.get("config-version"));
+        assertEquals(5, configuration.get("config-version"));
 
         Map<?, ?> migration = (Map<?, ?>) configuration.get("migration");
         assertEquals(Boolean.TRUE, migration.get("import-legacy-configs"));
@@ -35,6 +37,17 @@ class DescriptorTest {
         Map<?, ?> modules = (Map<?, ?>) configuration.get("modules");
         assertEquals(Boolean.TRUE, modules.get("equipment-effects"));
         assertEquals(Boolean.TRUE, modules.get("legacy-combat"));
+        assertEquals(Boolean.TRUE, modules.get("shopkeepers-fancynpcs"));
+
+        Map<?, ?> bridge = (Map<?, ?>) configuration.get("shopkeepers-fancynpcs");
+        Map<?, ?> adminEdit = (Map<?, ?>) bridge.get("admin-edit");
+        assertEquals(Boolean.TRUE, adminEdit.get("enabled"));
+        assertEquals(8.0, adminEdit.get("max-distance"));
+        assertEquals(10, adminEdit.get("cooldown-ticks"));
+        assertEquals(java.util.List.of(
+                "fancynpcs.command.npc.action.add",
+                "shopkeeper.admin",
+                "shopkeeper.remoteedit"), adminEdit.get("required-permissions"));
 
         Map<?, ?> equipment = (Map<?, ?>) configuration.get("equipment-effects");
         Map<?, ?> fatigue = (Map<?, ?>) equipment.get("fatigue");
