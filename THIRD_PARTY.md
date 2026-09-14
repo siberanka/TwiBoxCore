@@ -9,6 +9,8 @@ The optional integration is limited to recognizing existing namespaced persisten
 
 TwiBoxCore also does not bundle or modify PlayerKits2, Shopkeepers, ExcellentCrates, or UnlimitedNameTags. UnlimitedNameTags was verified as an original third-party component and is intentionally excluded from the merge. These names appear only where load ordering or migration documentation benefits from identifying the surrounding integration.
 
+The optional warp-menu module integrates with the server-provided DeluxeMenus command surface. DeluxeMenus is not bundled, modified, or redistributed; the dispatched menu identifier is fixed configuration and all dynamic values are strictly validated.
+
 The packet-NPC shop module compiles against, but does not bundle or redistribute:
 
 - [Shopkeepers](https://github.com/Shopkeepers/Shopkeepers), maintained by blablubbabc and contributors, under GPL-3.0;

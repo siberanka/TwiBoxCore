@@ -19,6 +19,7 @@ class DescriptorTest {
         assertEquals("1.21", descriptor.get("api-version"));
         assertEquals("STARTUP", descriptor.get("load"));
         assertEquals(java.util.List.of("Shopkeepers", "FancyNpcs"), descriptor.get("depend"));
+        assertTrue(((java.util.List<?>) descriptor.get("softdepend")).contains("DeluxeMenus"));
 
         Map<?, ?> commands = (Map<?, ?>) descriptor.get("commands");
         assertTrue(commands.containsKey("twiboxcore"));
@@ -29,7 +30,7 @@ class DescriptorTest {
     @Test
     void defaultConfigurationEnablesBothModules() {
         Map<String, Object> configuration = yaml("config.yml");
-        assertEquals(6, configuration.get("config-version"));
+        assertEquals(7, configuration.get("config-version"));
 
         Map<?, ?> migration = (Map<?, ?>) configuration.get("migration");
         assertEquals(Boolean.TRUE, migration.get("import-legacy-configs"));
@@ -39,12 +40,17 @@ class DescriptorTest {
         assertEquals(Boolean.TRUE, modules.get("legacy-combat"));
         assertEquals(Boolean.TRUE, modules.get("shopkeepers-fancynpcs"));
         assertEquals(Boolean.TRUE, modules.get("warp-tab-filter"));
+        assertEquals(Boolean.TRUE, modules.get("warp-menu"));
 
         Map<?, ?> warpTab = (Map<?, ?>) configuration.get("warp-tab-filter");
         assertEquals(java.util.List.of("warp", "ewarp", "essentials:warp"), warpTab.get("commands"));
         assertEquals(java.util.List.of(
                 "atlantistenspawna", "enddenspawna", "netherdenspawna",
                 "siberdenspawna", "so_ukdiyardanspawna"), warpTab.get("hidden-first-arguments"));
+
+        Map<?, ?> warpMenu = (Map<?, ?>) configuration.get("warp-menu");
+        assertEquals(java.util.List.of("warp"), warpMenu.get("commands"));
+        assertEquals("warplar", warpMenu.get("menu"));
 
         Map<?, ?> bridge = (Map<?, ?>) configuration.get("shopkeepers-fancynpcs");
         Map<?, ?> adminEdit = (Map<?, ?>) bridge.get("admin-edit");

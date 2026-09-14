@@ -29,6 +29,7 @@ Do not keep any replaced JAR beside TwiBoxCore. Duplicate listeners or a duplica
 9. Test a rapid hotbar/off-hand swap; the restricted block must not break using carried progress.
 10. Test representative legacy armor and weapon items, including an item that must remain untouched.
 11. Confirm every existing FancyNpc shop opens normally. With an account holding all configured administrator permissions, sneak-right-click a linked NPC and verify its editor opens. Remove one permission and repeat: the editor must not open.
+12. Disable legacy warp-menu and warp-tab Skripts. Verify bare `/warp` opens the configured DeluxeMenus menu, `/warp end` still reaches EssentialsX, and internal `*denspawna` warps remain hidden only from completion.
 
 The defaults preserve the old PDC keys and mechanics. The legacy commands and permissions remain available.
 
@@ -43,6 +44,8 @@ The defaults preserve the old PDC keys and mechanics. The legacy commands and pe
 - The importer never deletes or edits the legacy source and never scans unrelated plugin directories.
 - A malformed, ambiguous, oversized, player-executed, or suffixed remote action never opens an editor.
 - The editor never opens when any required permission is absent, the shop is missing, the object type is not `fancynpc`, or the player is outside the configured distance.
+- `/warp end` and other argument-bearing commands are never cancelled or dispatched by the warp-menu module.
+- Newlines, suffixes, malformed labels, oversized inputs, and invalid menu identifiers never become executable command input.
 
 ## Rollback
 

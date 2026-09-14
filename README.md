@@ -4,7 +4,7 @@
 [![Paper 1.21.11](https://img.shields.io/badge/Paper-1.21.11-222222)](https://papermc.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-TwiBoxCore is a focused Paper/Leaf plugin for restricted mining tools, high-level equipment compatibility, packet-NPC shop integration, and safe warp completion filtering on modern BoxPVP servers.
+TwiBoxCore is a focused Paper/Leaf plugin for restricted mining tools, high-level equipment compatibility, packet-NPC shop integration, and safe warp integration on modern BoxPVP servers.
 
 ## Features
 
@@ -39,8 +39,14 @@ TwiBoxCore is a focused Paper/Leaf plugin for restricted mining tools, high-leve
 - Leaves EssentialsX authoritative for permission-aware warp suggestions.
 - Removes only configured internal return warps from the first `/warp` argument.
 - Preserves rich asynchronous completion tooltips.
-- Never owns, cancels, dispatches, or executes a command and never marks asynchronous completion handled.
+- The completion filter never owns, cancels, dispatches, or executes a command and never marks asynchronous completion handled.
 - Uses immutable configuration and bounded exact-string matching; it performs no regex, network, disk, scheduler, or Netty work per request.
+
+### Warp menu routing
+
+- Intercepts only an exact, argument-free `/warp` and opens the configured DeluxeMenus menu.
+- Leaves `/warp end`, `/warp nether`, aliases with arguments, and all EssentialsX permission checks untouched.
+- Validates the fixed menu identifier and server-provided Minecraft player name before dispatching the bounded console command.
 
 TwiBoxCore opens no network sockets, makes no outbound requests, and contains no telemetry, updater, webhook, licensing check, credentials, server address, or player data.
 
@@ -50,13 +56,14 @@ TwiBoxCore opens no network sockets, makes no outbound requests, and contains no
 - Paper or Leaf 1.21.11
 - Shopkeepers 2.27.x
 - FancyNpcs 2.11.x
+- DeluxeMenus (when the warp-menu module is enabled)
 
 Dependencies are provided by the server and are not bundled into the release JAR.
 
 ## Installation
 
 1. Stop the server cleanly and back up `plugins/` plus player data.
-2. Copy `TwiBoxCore-1.6.0.jar` into `plugins/`.
+2. Copy `TwiBoxCore-1.7.0.jar` into `plugins/`.
 3. Start the server and review `plugins/TwiBoxCore/config.yml`.
 4. Run `/twiboxcore status` and `/twiboxcore selftest`.
 5. Test every configured restricted block once with its intended tool and once with an invalid tool before opening the server to players.
@@ -75,6 +82,7 @@ The bundled [`config.yml`](src/main/resources/config.yml) controls:
 - high-level armor repair and protection scaling.
 - guarded FancyNpcs/Shopkeepers administrator editing.
 - permission-preserving internal warp completion filtering.
+- exact bare-warp DeluxeMenus routing.
 
 Break-speed values are final multipliers: `0.40` means 40% of the otherwise calculated speed. Bukkit potion amplifiers are zero-based, so `1` means Mining Fatigue II.
 
@@ -99,7 +107,7 @@ Administrative permissions default to server operators.
 mvn --batch-mode clean verify
 ```
 
-Build with JDK 25. The verified artifact is written to `target/TwiBoxCore-1.6.0.jar`; its own classes still target Java 21 bytecode for the smallest compatible surface. The project intentionally contains no CI/CD workflow.
+Build with JDK 25. The verified artifact is written to `target/TwiBoxCore-1.7.0.jar`; its own classes still target Java 21 bytecode for the smallest compatible surface. The project intentionally contains no CI/CD workflow.
 
 ## Documentation
 

@@ -6,6 +6,7 @@ import net.twilightnw.twiboxcore.equipment.EquipmentEffectsModule;
 import net.twilightnw.twiboxcore.migration.LegacyConfigMigrator;
 import net.twilightnw.twiboxcore.shopbridge.ShopkeepersFancyNpcsModule;
 import net.twilightnw.twiboxcore.warptab.WarpTabFilterModule;
+import net.twilightnw.twiboxcore.warpmenu.WarpMenuModule;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -15,6 +16,7 @@ public final class TwiBoxCore extends JavaPlugin {
     private LegacyCombatModule legacyCombat;
     private ShopkeepersFancyNpcsModule shopBridge;
     private WarpTabFilterModule warpTabFilter;
+    private WarpMenuModule warpMenu;
     private String migrationStatus = "not-run";
 
     @Override
@@ -50,8 +52,11 @@ public final class TwiBoxCore extends JavaPlugin {
         changed |= setIfMissing("warp-tab-filter.hidden-first-arguments", java.util.List.of(
                 "atlantistenspawna", "enddenspawna", "netherdenspawna",
                 "siberdenspawna", "so_ukdiyardanspawna"));
-        if (getConfig().getInt("config-version", 0) < 6) {
-            getConfig().set("config-version", 6);
+        changed |= setIfMissing("modules.warp-menu", true);
+        changed |= setIfMissing("warp-menu.commands", java.util.List.of("warp"));
+        changed |= setIfMissing("warp-menu.menu", "warplar");
+        if (getConfig().getInt("config-version", 0) < 7) {
+            getConfig().set("config-version", 7);
             changed = true;
         }
         if (changed) {
@@ -93,6 +98,10 @@ public final class TwiBoxCore extends JavaPlugin {
             warpTabFilter = new WarpTabFilterModule(this);
             warpTabFilter.enable();
         }
+        if (getConfig().getBoolean("modules.warp-menu", true)) {
+            warpMenu = new WarpMenuModule(this);
+            warpMenu.enable();
+        }
     }
 
     private void stopModules() {
@@ -110,6 +119,10 @@ public final class TwiBoxCore extends JavaPlugin {
         if (warpTabFilter != null) {
             warpTabFilter.disable();
             warpTabFilter = null;
+        }
+        if (warpMenu != null) {
+            warpMenu.disable();
+            warpMenu = null;
         }
         getServer().getScheduler().cancelTasks(this);
     }
@@ -139,6 +152,7 @@ public final class TwiBoxCore extends JavaPlugin {
                         + ", combat=" + (legacyCombat == null ? "disabled" : legacyCombat.status())
                         + ", shopBridge=" + (shopBridge == null ? "disabled" : shopBridge.status())
                         + ", warpTab=" + (warpTabFilter == null ? "disabled" : warpTabFilter.status())
+                        + ", warpMenu=" + (warpMenu == null ? "disabled" : warpMenu.status())
                         + ", legacyImport=" + migrationStatus);
                 return true;
             }
@@ -184,8 +198,10 @@ public final class TwiBoxCore extends JavaPlugin {
                 boolean combatPassed = legacyCombat == null || legacyCombat.selfTest(sender);
                 boolean bridgePassed = shopBridge == null || shopBridge.selfTest(sender);
                 boolean warpTabPassed = warpTabFilter == null || warpTabFilter.selfTest(sender);
+                boolean warpMenuPassed = warpMenu == null || warpMenu.selfTest(sender);
                 sender.sendMessage("TwiBoxCore SELFTEST="
-                        + (equipmentPassed && combatPassed && bridgePassed && warpTabPassed ? "PASS" : "FAIL"));
+                        + (equipmentPassed && combatPassed && bridgePassed && warpTabPassed && warpMenuPassed
+                        ? "PASS" : "FAIL"));
                 return true;
             }
             default -> {

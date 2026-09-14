@@ -9,6 +9,7 @@ depend:
   - Shopkeepers
   - FancyNpcs
 softdepend:
+  - DeluxeMenus
   - ItemTag
   - ItemEdit
   - PlayerKits2

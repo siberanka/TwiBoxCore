@@ -6,7 +6,7 @@
 
   <groupId>net.twilightnw</groupId>
   <artifactId>twiboxcore</artifactId>
-  <version>1.6.0</version>
+  <version>1.7.0</version>
   <name>TwiBoxCore</name>
   <description>Compatibility core for modern Paper/Leaf BoxPVP servers.</description>
   <url>https://github.com/siberanka/TwiBoxCore</url>

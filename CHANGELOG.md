@@ -2,6 +2,13 @@
 
 All notable changes are documented here.
 
+## 1.7.0 - 2026-09-14
+
+- Moved exact bare `/warp` menu routing from Skript into TwiBoxCore.
+- Opens the configured `warplar` DeluxeMenus menu while leaving every argument-bearing warp command to EssentialsX.
+- Added bounded command/menu/player-name validation and positive, negative, malformed, and injection-focused tests.
+- Kept the permission-aware warp completion filter independent from command execution.
+
 ## 1.6.0 - 2026-09-14
 
 - Replaced the reflective Skript warp suggestion generator with a bounded native Paper event filter.

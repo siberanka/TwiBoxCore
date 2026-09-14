@@ -1,4 +1,4 @@
-config-version: 6
+config-version: 7
 
 migration:
   # Imports recognized legacy Twilight plugin configs once. Source files are
@@ -10,6 +10,7 @@ modules:
   legacy-combat: true
   shopkeepers-fancynpcs: true
   warp-tab-filter: true
+  warp-menu: true
 
 # EssentialsX remains authoritative for which warps a player may see. This
 # module only removes internal return warps from first-argument suggestions.
@@ -22,6 +23,12 @@ warp-tab-filter:
     - netherdenspawna
     - siberdenspawna
     - so_ukdiyardanspawna
+
+# Exact bare /warp opens the configured DeluxeMenus menu. Commands containing
+# an argument continue to EssentialsX without any interception.
+warp-menu:
+  commands: [warp]
+  menu: warplar
 
 shopkeepers-fancynpcs:
   # Sneak + right-click opens the editor only after every permission below is
