@@ -27,7 +27,7 @@ class DescriptorTest {
     @Test
     void defaultConfigurationEnablesBothModules() {
         Map<String, Object> configuration = yaml("config.yml");
-        assertEquals(2, configuration.get("config-version"));
+        assertEquals(4, configuration.get("config-version"));
 
         Map<?, ?> migration = (Map<?, ?>) configuration.get("migration");
         assertEquals(Boolean.TRUE, migration.get("import-legacy-configs"));
@@ -42,10 +42,27 @@ class DescriptorTest {
         assertEquals(20, fatigue.get("duration-ticks"));
         assertEquals(6, fatigue.get("arm-delay-ticks"));
 
+        Map<?, ?> warning = (Map<?, ?>) equipment.get("wrong-tool-warning");
+        assertEquals(20, warning.get("cooldown-ticks"));
+        assertEquals("&cBu blok yalnızca ", warning.get("prefix"));
+        assertEquals(" &cile kırılır!", warning.get("suffix"));
+        Map<?, ?> toolNames = (Map<?, ?>) warning.get("tool-names");
+        assertTrue(toolNames.keySet().containsAll(java.util.Set.of(
+                "witch-shears", "cyber-shears", "zeus-hoe", "glacier-pickaxe")));
+
         Map<?, ?> speeds = (Map<?, ?>) equipment.get("break-speed-multipliers");
         assertEquals(0.60, speeds.get("witch-shears"));
+        assertEquals(0.60, speeds.get("cyber-shears"));
         assertEquals(0.30, speeds.get("zeus-hoe"));
         assertEquals(0.15, speeds.get("glacier-pickaxe"));
+
+        Map<?, ?> restricted = (Map<?, ?>) equipment.get("restricted-blocks");
+        Map<?, ?> witchWool = (Map<?, ?>) restricted.get("witch-wool");
+        Map<?, ?> cyberWool = (Map<?, ?>) restricted.get("cyber-wool");
+        assertEquals("endd", witchWool.get("world"));
+        assertEquals("arena", cyberWool.get("world"));
+        assertEquals(java.util.List.of("BLACK_WOOL", "GRAY_WOOL"), witchWool.get("materials"));
+        assertEquals(java.util.List.of("CYAN_WOOL", "LIGHT_BLUE_WOOL"), cyberWool.get("materials"));
 
         Map<?, ?> combat = (Map<?, ?>) configuration.get("legacy-combat");
         Map<?, ?> repair = (Map<?, ?>) combat.get("repair");

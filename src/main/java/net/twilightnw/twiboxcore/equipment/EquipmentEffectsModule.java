@@ -1,9 +1,11 @@
 package net.twilightnw.twiboxcore.equipment;
 
 import java.util.EnumSet;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -69,12 +71,18 @@ public final class EquipmentEffectsModule implements Listener {
     private final Map<UUID, Long> armedAt = new HashMap<>();
     private final Map<UUID, String> handState = new HashMap<>();
     private final Map<UUID, MiningAttempt> miningAttempts = new HashMap<>();
+    private final Map<UUID, Long> warningAt = new HashMap<>();
     private final Set<UUID> guardApplied = new HashSet<>();
     private final Map<BlockRuleType, BlockRule> rules = new HashMap<>();
+    private final Map<ToolKind, Component> requiredToolNames = new EnumMap<>(ToolKind.class);
     private int targetAmplifier;
     private int effectTicks;
     private int armTicks;
+    private int warningCooldownTicks;
+    private Component warningPrefix;
+    private Component warningSuffix;
     private double witchModifier;
+    private double cyberModifier;
     private double zeusModifier;
     private double glacierModifier;
     private long tick;
@@ -109,7 +117,9 @@ public final class EquipmentEffectsModule implements Listener {
         armedAt.clear();
         handState.clear();
         miningAttempts.clear();
+        warningAt.clear();
         guardApplied.clear();
+        requiredToolNames.clear();
     }
 
     public String status() {
@@ -121,11 +131,30 @@ public final class EquipmentEffectsModule implements Listener {
         targetAmplifier = Math.max(0, plugin.getConfig().getInt(root + "fatigue.amplifier", 1));
         effectTicks = Math.max(5, plugin.getConfig().getInt(root + "fatigue.duration-ticks", 20));
         armTicks = Math.max(0, plugin.getConfig().getInt(root + "fatigue.arm-delay-ticks", 6));
+        warningCooldownTicks = Math.max(0, plugin.getConfig().getInt(root + "wrong-tool-warning.cooldown-ticks", 20));
+        warningPrefix = deserializeConfigured(root + "wrong-tool-warning.prefix", "&cBu blok yalnızca ");
+        warningSuffix = deserializeConfigured(root + "wrong-tool-warning.suffix", " &cile kırılır!");
+        requiredToolNames.clear();
+        requiredToolNames.put(ToolKind.WITCH_SHEARS, deserializeConfigured(
+                root + "wrong-tool-warning.tool-names.witch-shears",
+                "&x&0&0&6&3&b&1&lM&x&0&0&8&1&b&c&lA&x&0&0&9&e&c&6&lK&x&0&0&8&1&b&c&lA&x&0&0&6&3&b&1&lS"));
+        requiredToolNames.put(ToolKind.CYBER_SHEARS, deserializeConfigured(
+                root + "wrong-tool-warning.tool-names.cyber-shears", "&x&e&6&f&f&f&e&lMAKAS"));
+        requiredToolNames.put(ToolKind.ZEUS_HOE, deserializeConfigured(
+                root + "wrong-tool-warning.tool-names.zeus-hoe",
+                "&x&f&b&8&e&1&d&lZ&x&f&b&9&6&1&b&lE&x&f&b&9&e&1&8&lU&x&f&c&a&5&1&6&lS"
+                        + "&x&f&c&a&d&1&3&l'&x&f&c&b&5&1&1&lU&x&f&c&b&d&0&f&lN "
+                        + "&x&f&c&c&4&0&c&lÇ&x&f&c&c&c&0&a&lA&x&f&d&d&4&0&7&lP"
+                        + "&x&f&d&d&c&0&5&lA&x&f&d&e&3&0&2&lS&x&f&d&e&b&0&0&lI"));
+        requiredToolNames.put(ToolKind.GLACIER_PICKAXE, deserializeConfigured(
+                root + "wrong-tool-warning.tool-names.glacier-pickaxe", GLACIER_NAME));
         witchModifier = BreakSpeed.toAttributeModifier(plugin.getConfig().getDouble(root + "break-speed-multipliers.witch-shears", 0.60));
+        cyberModifier = BreakSpeed.toAttributeModifier(plugin.getConfig().getDouble(root + "break-speed-multipliers.cyber-shears", 0.60));
         zeusModifier = BreakSpeed.toAttributeModifier(plugin.getConfig().getDouble(root + "break-speed-multipliers.zeus-hoe", 0.30));
         glacierModifier = BreakSpeed.toAttributeModifier(plugin.getConfig().getDouble(root + "break-speed-multipliers.glacier-pickaxe", 0.15));
         rules.clear();
         rules.put(BlockRuleType.WITCH_WOOL, loadRule(root + "restricted-blocks.witch-wool", ToolKind.WITCH_SHEARS, true));
+        rules.put(BlockRuleType.CYBER_WOOL, loadRule(root + "restricted-blocks.cyber-wool", ToolKind.CYBER_SHEARS, true));
         rules.put(BlockRuleType.ATLANTIS_SPONGE, loadRule(root + "restricted-blocks.atlantis-sponge", ToolKind.ZEUS_HOE, true));
         rules.put(BlockRuleType.GLACIER_ICE, loadRule(root + "restricted-blocks.glacier-ice", ToolKind.GLACIER_PICKAXE, false));
     }
@@ -144,6 +173,11 @@ public final class EquipmentEffectsModule implements Listener {
         return new BlockRule(world, materials, required, requiresFatigue);
     }
 
+    private Component deserializeConfigured(String path, String fallback) {
+        return LEGACY.deserialize(plugin.getConfig().getString(path, fallback))
+                .decoration(TextDecoration.ITALIC, false);
+    }
+
     public boolean handleToolCommand(CommandSender sender, String[] args) {
         if (args.length != 3 || !args[0].equalsIgnoreCase("give") || !args[1].equalsIgnoreCase("buzul")) {
             return false;
@@ -160,9 +194,20 @@ public final class EquipmentEffectsModule implements Listener {
     }
 
     public boolean selfTest(CommandSender sender) {
+        BlockRule witchWool = rules.get(BlockRuleType.WITCH_WOOL);
+        BlockRule cyberWool = rules.get(BlockRuleType.CYBER_WOOL);
         boolean passed = closeTo(1.0 + witchModifier, 0.60)
+                && closeTo(1.0 + cyberModifier, 0.60)
+                && closeTo(witchModifier, cyberModifier)
                 && closeTo(1.0 + zeusModifier, 0.30)
                 && closeTo(1.0 + glacierModifier, 0.15)
+                && witchWool != null && witchWool.required() == ToolKind.WITCH_SHEARS
+                && cyberWool != null && cyberWool.required() == ToolKind.CYBER_SHEARS
+                && witchWool.required() != cyberWool.required()
+                && warningCooldownTicks >= 0
+                && requiredToolNames.entrySet().stream().allMatch(entry -> entry.getKey() != ToolKind.NONE
+                        && !PLAIN_TEXT.serialize(entry.getValue()).isBlank())
+                && requiredToolNames.size() == ToolKind.values().length - 1
                 && rules.values().stream().allMatch(rule -> !rule.world().isBlank() && !rule.materials().isEmpty());
         sender.sendMessage("Equipment self-test: " + (passed ? "PASS" : "FAIL"));
         return passed;
@@ -185,6 +230,7 @@ public final class EquipmentEffectsModule implements Listener {
         armedAt.remove(id);
         handState.remove(id);
         miningAttempts.remove(id);
+        warningAt.remove(id);
         guardApplied.remove(id);
     }
 
@@ -240,9 +286,12 @@ public final class EquipmentEffectsModule implements Listener {
             miningAttempts.remove(player.getUniqueId());
             return;
         }
-        if (rule.required() != toolKind(player.getInventory().getItemInMainHand())
-                || (rule.requiresFatigue() ? !isReady(player) : !isArmed(player))) {
+        boolean correctTool = rule.required() == toolKind(player.getInventory().getItemInMainHand());
+        if (!correctTool || (rule.requiresFatigue() ? !isReady(player) : !isArmed(player))) {
             miningAttempts.remove(player.getUniqueId());
+            if (!correctTool) {
+                warnRequiredTool(player, rule.required());
+            }
             rejectMining(player, event.getBlock(), () -> event.setCancelled(true));
             return;
         }
@@ -263,6 +312,9 @@ public final class EquipmentEffectsModule implements Listener {
         boolean correctTool = rule.required() == toolKind(player.getInventory().getItemInMainHand());
         boolean ready = rule.requiresFatigue() ? isReady(player) : isArmed(player);
         if (!correctTool || !ready || !validStart) {
+            if (!correctTool) {
+                warnRequiredTool(player, rule.required());
+            }
             rejectMining(player, event.getBlock(), () -> event.setCancelled(true));
         }
     }
@@ -283,6 +335,20 @@ public final class EquipmentEffectsModule implements Listener {
     private void rejectMining(Player player, Block block, Runnable cancel) {
         cancel.run();
         player.sendBlockChange(block.getLocation(), block.getBlockData());
+    }
+
+    private void warnRequiredTool(Player player, ToolKind required) {
+        UUID id = player.getUniqueId();
+        Long lastWarning = warningAt.get(id);
+        if (lastWarning != null && tick - lastWarning < warningCooldownTicks) {
+            return;
+        }
+        Component toolName = requiredToolNames.get(required);
+        if (toolName == null) {
+            return;
+        }
+        warningAt.put(id, tick);
+        player.sendActionBar(warningPrefix.append(toolName).append(warningSuffix));
     }
 
     private void heartbeat() {
@@ -353,6 +419,7 @@ public final class EquipmentEffectsModule implements Listener {
         }
         double modifier = switch (toolKind) {
             case WITCH_SHEARS -> witchModifier;
+            case CYBER_SHEARS -> cyberModifier;
             case ZEUS_HOE -> zeusModifier;
             case GLACIER_PICKAXE -> glacierModifier;
             case NONE -> throw new IllegalStateException("NONE handled before multiplier selection");
@@ -434,7 +501,7 @@ public final class EquipmentEffectsModule implements Listener {
             }
             return changed;
         }
-        if (kind == ToolKind.WITCH_SHEARS && !Boolean.TRUE.equals(meta.getEnchantmentGlintOverride())) {
+        if (kind.isShears() && !Boolean.TRUE.equals(meta.getEnchantmentGlintOverride())) {
             meta.setEnchantmentGlintOverride(true);
             changed = true;
         }
@@ -447,7 +514,7 @@ public final class EquipmentEffectsModule implements Listener {
                 }
             }
         }
-        String expectedEquips = kind == ToolKind.WITCH_SHEARS
+        String expectedEquips = kind.isShears()
                 ? "HAND;OFF_HAND;FEET;LEGS;CHEST;HEAD" : "HAND;OFF_HAND";
         if (!expectedEquips.equals(pdc.get(effectsEquipsKey, PersistentDataType.STRING))) {
             pdc.set(effectsEquipsKey, PersistentDataType.STRING, expectedEquips);
@@ -455,7 +522,7 @@ public final class EquipmentEffectsModule implements Listener {
         }
         String effects = pdc.get(effectsListKey, PersistentDataType.STRING);
         if (effects == null) {
-            effects = kind == ToolKind.WITCH_SHEARS
+            effects = kind.isShears()
                     ? "SLOW_DIGGING,1,true,true,true" : "SLOW_DIGGING,1,true,false,false";
             pdc.set(effectsListKey, PersistentDataType.STRING, effects);
             changed = true;
@@ -511,6 +578,16 @@ public final class EquipmentEffectsModule implements Listener {
 
     private ToolKind toolKind(ItemStack item) {
         if (item != null && !item.getType().isAir() && item.hasItemMeta()) {
+            if (item.getType() == Material.SHEARS) {
+                ToolKind loreKind = ToolKind.fromCanonicalId(classifyLegacyShearsLore(
+                        item.getItemMeta().lore() == null ? List.of()
+                                : item.getItemMeta().lore().stream().map(PLAIN_TEXT::serialize).toList()));
+                if (loreKind.isShears()) {
+                    // Lore is checked before the PDC marker because builds before 1.3.0
+                    // incorrectly marked every legacy shears stack as witch_shears.
+                    return loreKind;
+                }
+            }
             String id = item.getItemMeta().getPersistentDataContainer()
                     .get(specialToolKey, PersistentDataType.STRING);
             ToolKind marked = ToolKind.fromCanonicalId(id);
@@ -522,6 +599,19 @@ public final class EquipmentEffectsModule implements Listener {
             return item.getType() == Material.SHEARS ? ToolKind.WITCH_SHEARS : ToolKind.ZEUS_HOE;
         }
         return isGlacierPickaxe(item) ? ToolKind.GLACIER_PICKAXE : ToolKind.NONE;
+    }
+
+    static String classifyLegacyShearsLore(List<String> lore) {
+        for (String line : lore) {
+            String normalized = line.toLowerCase(Locale.forLanguageTag("tr"));
+            if (normalized.contains("siber yününü") || normalized.contains("siber yununu")) {
+                return ToolKind.CYBER_SHEARS.canonicalId;
+            }
+            if (normalized.contains("cadı yününü") || normalized.contains("cadi yununu")) {
+                return ToolKind.WITCH_SHEARS.canonicalId;
+            }
+        }
+        return ToolKind.NONE.canonicalId;
     }
 
     private boolean isGlacierPickaxe(ItemStack item) {
@@ -570,6 +660,7 @@ public final class EquipmentEffectsModule implements Listener {
     private enum ToolKind {
         NONE("none", Material.AIR),
         WITCH_SHEARS("witch_shears", Material.SHEARS),
+        CYBER_SHEARS("cyber_shears", Material.SHEARS),
         ZEUS_HOE("zeus_hoe", Material.DIAMOND_HOE),
         GLACIER_PICKAXE("glacier_pickaxe", Material.DIAMOND_PICKAXE);
 
@@ -585,6 +676,10 @@ public final class EquipmentEffectsModule implements Listener {
             return this != NONE && material == actual;
         }
 
+        private boolean isShears() {
+            return this == WITCH_SHEARS || this == CYBER_SHEARS;
+        }
+
         private static ToolKind fromCanonicalId(String id) {
             if (id != null) {
                 for (ToolKind kind : values()) {
@@ -597,7 +692,7 @@ public final class EquipmentEffectsModule implements Listener {
         }
     }
 
-    private enum BlockRuleType { WITCH_WOOL, ATLANTIS_SPONGE, GLACIER_ICE }
+    private enum BlockRuleType { WITCH_WOOL, CYBER_WOOL, ATLANTIS_SPONGE, GLACIER_ICE }
 
     private record BlockRule(String world, Set<Material> materials, ToolKind required, boolean requiresFatigue) { }
 

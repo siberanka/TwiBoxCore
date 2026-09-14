@@ -2,6 +2,19 @@
 
 All notable changes are documented here.
 
+## 1.4.0 - 2026-09-14
+
+- Added a throttled action-bar warning when restricted mine blocks are struck with the wrong tool.
+- Preserved the exact live display-name colors and bold state for the Witch Shears, Cyber Shears, Zeus Hoe, and Glacier Pickaxe.
+- Kept arm-delay and carried-progress rejections silent so valid tools never receive a misleading wrong-tool warning.
+
+## 1.3.0 - 2026-09-13
+
+- Added separate persistent identities for the End and Siber shears.
+- Restricted each shears variant to its own world and wool palette.
+- Kept both shears at the same configured final break-speed multiplier.
+- Extended runtime self-tests to cover cross-mine identity separation.
+
 ## 1.2.0 - 2026-09-13
 
 - Merged strict Shopkeepers-canonical equipment synchronization into TwiBoxCore.

@@ -1,4 +1,4 @@
-config-version: 2
+config-version: 4
 
 migration:
   # Imports recognized legacy Twilight plugin configs once. Source files are
@@ -16,14 +16,27 @@ equipment-effects:
     amplifier: 1 # Bukkit is zero-based: 1 = Mining Fatigue II
     duration-ticks: 20
     arm-delay-ticks: 6
+  wrong-tool-warning:
+    cooldown-ticks: 20
+    prefix: "&cBu blok yalnızca "
+    suffix: " &cile kırılır!"
+    tool-names:
+      witch-shears: "&x&0&0&6&3&b&1&lM&x&0&0&8&1&b&c&lA&x&0&0&9&e&c&6&lK&x&0&0&8&1&b&c&lA&x&0&0&6&3&b&1&lS"
+      cyber-shears: "&x&e&6&f&f&f&e&lMAKAS"
+      zeus-hoe: "&x&f&b&8&e&1&d&lZ&x&f&b&9&6&1&b&lE&x&f&b&9&e&1&8&lU&x&f&c&a&5&1&6&lS&x&f&c&a&d&1&3&l'&x&f&c&b&5&1&1&lU&x&f&c&b&d&0&f&lN &x&f&c&c&4&0&c&lÇ&x&f&c&c&c&0&a&lA&x&f&d&d&4&0&7&lP&x&f&d&d&c&0&5&lA&x&f&d&e&3&0&2&lS&x&f&d&e&b&0&0&lI"
+      glacier-pickaxe: "&x&0&0&8&b&f&bB&x&1&1&9&3&f&8u&x&2&2&9&c&f&5z&x&3&3&a&4&f&2u&x&4&4&a&c&e&fl &x&5&5&b&5&e&bK&x&6&6&b&d&e&8a&x&7&7&c&5&e&5z&x&8&8&c&e&e&2m&x&9&9&d&6&d&fa"
   break-speed-multipliers:
     witch-shears: 0.60
+    cyber-shears: 0.60
     zeus-hoe: 0.30
     glacier-pickaxe: 0.15
   restricted-blocks:
     witch-wool:
       world: endd
       materials: [BLACK_WOOL, GRAY_WOOL]
+    cyber-wool:
+      world: arena
+      materials: [CYAN_WOOL, LIGHT_BLUE_WOOL]
     atlantis-sponge:
       world: atlantis
       materials: [SPONGE, WET_SPONGE]
